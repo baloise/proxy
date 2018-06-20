@@ -25,6 +25,9 @@ public class Proxy {
 		.withMenuEntry("Config", e -> {
 			config.openProperties();
 		})
+		.withMenuEntry("Password", e -> {
+			Password.showDialog();
+		})
 		.withMenuEntry("Test", e -> {
 			test(config.load().getProperty("testURL", "http://example.com/"));
 		});
