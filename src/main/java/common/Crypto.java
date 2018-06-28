@@ -51,7 +51,8 @@ public class Crypto {
 			char[] mesg = message.toCharArray();
 			Random r = new Random(seed);
 			for (int i = 0; i < mesg.length; i++) {
-				mesg[i] = (char) (mesg[i] ^ rndChar(r));
+				// groovy needs the additional cast to char
+				mesg[i] = (char) (((char)mesg[i]) ^ ((char) rndChar(r)));
 			}
 			return new String(mesg);
 		} catch (Exception e) {
