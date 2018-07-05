@@ -36,7 +36,11 @@ public class Proxy {
 
 	public void start() {
 		System.out.println("starting");
-		Password.get();
+		try {
+			Password.get();			
+		} catch (IllegalStateException e) {
+			Password.showDialog();
+		}
 		if(simpleProxyChain != null) simpleProxyChain.stop();
 		simpleProxyChain = new SimpleProxyChain(config.load());
 		simpleProxyChain.start(new FiltersSource407(() -> {
