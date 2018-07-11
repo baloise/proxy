@@ -1,14 +1,16 @@
 # proxy
 An minimal authenticating HTTP(S) forward proxy based on https://github.com/adamfisk/LittleProxy. You can easily add sniffing / rewriting if needed. In short: Fiddler in Java 
 
+[![](https://jitpack.io/v/baloise/proxy.svg)](https://jitpack.io/com/github/baloise/proxy/master-SNAPSHOT/proxy-master-SNAPSHOT.jar)
+
 # Installation on Windows
 ## Download the binary. (works also for updates)
 
 ```
 if not exist %userprofile%\.proxy mkdir %userprofile%\.proxy
-powershell -Command "$proxy = [System.Net.WebRequest]::GetSystemWebProxy();$proxy.Credentials = [System.Net.CredentialCache]::DefaultCredentials;$wc = new-object system.net.WebClient;$wc.proxy = $proxy;$wc.DownloadFile('https://jitpack.io/com/github/baloise/proxy/master/proxy-master.jar', '%USERPROFILE%/.proxy/proxy.jar');"
+powershell -Command "$proxy = [System.Net.WebRequest]::GetSystemWebProxy();$proxy.Credentials = [System.Net.CredentialCache]::DefaultCredentials;$wc = new-object system.net.WebClient;$wc.proxy = $proxy;$wc.DownloadFile('https://jitpack.io/com/github/baloise/proxy/master-SNAPSHOT/proxy-master-SNAPSHOT.jar', '%USERPROFILE%/.proxy/proxy.jar');"
 ```
-You can look up the current jay version @ https://jitpack.io/com/github/baloise/jay/jay/-SNAPSHOT/maven-metadata.xml
+You can look up the current proxy version @ https://jitpack.io/com/github/baloise/proxy/proxy/-SNAPSHOT/maven-metadata.xml
 
 ## Create start up item
 ```
