@@ -1,17 +1,16 @@
 package common;
 
+import java.util.Base64;
 import java.util.Random;
-
-import javax.xml.bind.DatatypeConverter;
 
 public class Crypto {
 
 	public static String base64encode(String text) {
-		return DatatypeConverter.printBase64Binary(text.getBytes());
+		return Base64.getEncoder().encodeToString(text.getBytes());
 	}
 
 	public static String base64decode(String text) {
-		return new String(DatatypeConverter.parseBase64Binary(text));
+		return new String(Base64.getDecoder().decode(text));
 	}
 
 	public static String userEncrypt(String message) {
