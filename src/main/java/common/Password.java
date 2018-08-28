@@ -5,6 +5,7 @@ import static javax.swing.JOptionPane.showOptionDialog;
 import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
 
+import javax.swing.Icon;
 import javax.swing.JOptionPane;
 import javax.swing.JPasswordField;
 
@@ -12,19 +13,31 @@ public class Password {
 
 	private static final String PASSWORD = "password";
 	
+	private static String appName = null;
+	private static Icon appIcon = null;
+
 	public static void main(String[] args) throws BackingStoreException {
 		showDialog();
 	}
 
+	public static void setDialogBrand(String appName, Icon appIcon) {
+		Password.appName = appName;
+		Password.appIcon = appIcon;
+	}
+
 	public static boolean showDialog() {
 		JPasswordField pass = new JPasswordField(10);
+		String title = "Set windows password";
+		if (appName != null) {
+			title = appName + ": " + title;
+		}
 		int showOptionDialog = showOptionDialog(
 				null, 
 				pass, 
-				"Set windows password", 
+				title,
 				JOptionPane.NO_OPTION,
 				JOptionPane.PLAIN_MESSAGE, 
-				null, 
+				appIcon,
 				new String[] { "Set password","Remove password", "Cancel" }, "Set password");
 		if (showOptionDialog == 0) {
 			set(new String(pass.getPassword()));

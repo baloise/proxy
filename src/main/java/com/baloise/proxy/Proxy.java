@@ -6,6 +6,7 @@ import java.net.InetSocketAddress;
 import java.net.URL;
 import java.util.Scanner;
 
+import javax.swing.ImageIcon;
 import javax.swing.SwingUtilities;
 
 import com.baloise.proxy.config.Config;
@@ -21,6 +22,7 @@ public class Proxy {
 
 	public Proxy() {
 		config = new Config();
+		Password.setDialogBrand("Proxy", new ImageIcon(ProxyUI.createIcon()));
 		ui = new ProxyUI()
 		.withMenuEntry("Config", e -> {
 			config.openProperties();

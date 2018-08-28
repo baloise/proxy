@@ -23,14 +23,14 @@ public class ProxyUI {
 		popupMenu = new PopupMenu();
 	}
 	
-	public BufferedImage createIcon() {
+	public static BufferedImage createIcon() {
 		BufferedImage image = new BufferedImage(64, 64, BufferedImage.TYPE_INT_ARGB);
 		Graphics2D g2d = image.createGraphics();
 
 	    g2d.setColor(Color.red);
-	    g2d.fill(new Ellipse2D.Float(0, 0, 50, 30));
+	    g2d.fill(new Ellipse2D.Float(0, 0, 50, 32));
 	    g2d.setColor(Color.green);
-	    g2d.fill(new Ellipse2D.Float(0, 30, 50, 40));
+	    g2d.fill(new Ellipse2D.Float(0, 32, 50, 32));
 	    g2d.dispose();
 	    return image;
 	}
