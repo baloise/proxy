@@ -23,7 +23,7 @@ public class ProxyUI {
 		popupMenu = new PopupMenu();
 	}
 	
-	public BufferedImage createIcon() {
+	public static BufferedImage createIcon() {
 		BufferedImage image = new BufferedImage(64, 64, BufferedImage.TYPE_INT_ARGB);
 		Graphics2D g2d = image.createGraphics();
 
