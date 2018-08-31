@@ -3,8 +3,11 @@ An minimal authenticating HTTP(S) forward proxy based on https://github.com/adam
 
 [![](https://jitpack.io/v/baloise/proxy.svg)](https://jitpack.io/com/github/baloise/proxy/master-SNAPSHOT/proxy-master-SNAPSHOT.jar)
 
-# Installation on Windows
-## Download the binary. (works also for updates)
+# Installation
+
+## on Windows
+
+### Download the binary. (works also for updates)
 
 ```
 if not exist %userprofile%\.proxy mkdir %userprofile%\.proxy
@@ -12,12 +15,12 @@ powershell -Command "$proxy = [System.Net.WebRequest]::GetSystemWebProxy();$prox
 ```
 You can look up the current proxy version @ https://jitpack.io/com/github/baloise/proxy/proxy/-SNAPSHOT/maven-metadata.xml
 
-## Create start up item
+### Create start up item
 ```
 echo powershell -Command Start-Process 'javaw.exe' '-jar "%userprofile%\.proxy\proxy.jar"' -NoNewWindow > "%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\proxy.bat"
 ```
 
-## Run
+### Run
 ```
 powershell -Command Start-Process 'javaw.exe' '-jar "%userprofile%\.proxy\proxy.jar"' -NoNewWindow
 ```
