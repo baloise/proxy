@@ -9,6 +9,9 @@ import java.util.Scanner;
 import javax.swing.ImageIcon;
 import javax.swing.SwingUtilities;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.baloise.proxy.config.Config;
 import com.baloise.proxy.ui.ProxyUI;
 
@@ -19,6 +22,7 @@ public class Proxy {
 	private ProxyUI ui;
 	private SimpleProxyChain simpleProxyChain;
 	private Config config;
+	Logger log = LoggerFactory.getLogger(Proxy.class);
 
 	public Proxy() {
 		config = new Config();
@@ -37,7 +41,6 @@ public class Proxy {
 	}
 
 	public void start() {
-		System.out.println("starting");
 		try {
 			Password.get();			
 		} catch (IllegalStateException e) {
@@ -45,6 +48,7 @@ public class Proxy {
 		}
 		if(simpleProxyChain != null) simpleProxyChain.stop();
 		simpleProxyChain = new SimpleProxyChain(config.load());
+		log.info("Proxy starting");
 		simpleProxyChain.start(new FiltersSource407(() -> {
 			SwingUtilities.invokeLater(()->{
 				Password.showDialog();
@@ -65,11 +69,11 @@ public class Proxy {
 			HttpURLConnection con = (HttpURLConnection) new URL(url).openConnection(proxy);
 			try (Scanner scan = new Scanner(con.getInputStream())) {
 				String text = scan.useDelimiter("\\A").next();
-				System.out.println(text);
+				log.info(text);
 			}
 			return con.getResponseCode() < 300;
 		} catch (IOException e) {
-			e.printStackTrace();
+			log.warn(e.getMessage(), e);
 			return false;
 		}
 	}

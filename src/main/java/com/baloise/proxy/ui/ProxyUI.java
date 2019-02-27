@@ -11,10 +11,14 @@ import java.awt.event.ActionListener;
 import java.awt.geom.Ellipse2D;
 import java.awt.image.BufferedImage;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class ProxyUI {
 	private SystemTray tray;
 	private PopupMenu popupMenu;
 	private boolean showing;
+	Logger log = LoggerFactory.getLogger(ProxyUI.class);
 	
 	public ProxyUI() {
 		tray = SystemTray.getSystemTray();
@@ -40,7 +44,7 @@ public class ProxyUI {
 		showing = true;
 		
 		withMenuEntry("Exit", e -> {
-			System.out.println("Exiting...");
+			log.info("Exiting...");
 			System.exit(0);
 		});
 		
@@ -50,7 +54,7 @@ public class ProxyUI {
 		try {
 			tray.add(trayIcon);
 		} catch (AWTException e) {
-			System.err.println("TrayIcon could not be added.");
+			log.error("TrayIcon could not be added.", e);
 		}
 		
 	}
