@@ -11,11 +11,15 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class FileWatcher extends Thread {
     private final File file;
     private AtomicBoolean stop = new AtomicBoolean(false);
 	private Consumer<File> onChange;
-
+	Logger log = LoggerFactory.getLogger(FileWatcher.class);
+	
     public FileWatcher(File file, Consumer<File> onChange) {
         this.file = file;
 		this.onChange = onChange;
@@ -50,7 +54,8 @@ public class FileWatcher extends Thread {
                         continue;
                     } else if (kind == java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY
                             && filename.toString().equals(file.getName()) && file.length() > 0) {
-                       	onChange.accept(file);
+                       	log.info(file + " changed - reloading");
+                    	onChange.accept(file);
                     }
                     boolean valid = key.reset();
                     if (!valid) { break; }

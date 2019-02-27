@@ -41,6 +41,7 @@ public class Proxy {
 	}
 
 	public void start() {
+		log.info("using slf4j SimpleLogger, for configuration see https://www.slf4j.org/api/org/slf4j/impl/SimpleLogger.html");
 		try {
 			Password.get();			
 		} catch (IllegalStateException e) {
@@ -50,6 +51,7 @@ public class Proxy {
 		simpleProxyChain = new SimpleProxyChain(config.load());
 		log.info("Proxy starting");
 		simpleProxyChain.start(new FiltersSource407(() -> {
+			log.warn("got 407 - asking for new password");
 			SwingUtilities.invokeLater(()->{
 				Password.showDialog();
 				start();				
