@@ -66,7 +66,9 @@ public class Proxy {
 	}
 
 	public boolean test(String url) {
-		java.net.Proxy proxy = new java.net.Proxy(java.net.Proxy.Type.HTTP, new InetSocketAddress("127.0.0.1", simpleProxyChain.PORT));
+		InetSocketAddress sa = new InetSocketAddress("127.0.0.1", simpleProxyChain.LOCAL_PORTS[0]);
+		log.info("testing "+sa);
+		java.net.Proxy proxy = new java.net.Proxy(java.net.Proxy.Type.HTTP, sa);
 		try {
 			HttpURLConnection con = (HttpURLConnection) new URL(url).openConnection(proxy);
 			try (Scanner scan = new Scanner(con.getInputStream())) {

@@ -2,12 +2,15 @@ package com.baloise.proxy;
 
 import static java.lang.Boolean.parseBoolean;
 import static java.lang.Integer.parseInt;
-import static java.lang.String.format;
 
 import java.net.InetSocketAddress;
+import java.util.List;
 import java.util.Properties;
 import java.util.Queue;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import org.littleshoot.proxy.ChainedProxy;
 import org.littleshoot.proxy.ChainedProxyAdapter;
@@ -28,11 +31,11 @@ public class SimpleProxyChain {
 	private final int UPSTREAM_PORT;
 	private final String UPSTREAM_SERVER;
 	private final int INTERNAL_PORT;
-	public final int PORT;
+	public final int[] LOCAL_PORTS;
 	private final Pattern NO_PROXY_HOSTS_REGEX;
 	private final ChainedProxyManager chainedProxyManager;
 	private HttpProxyServer internalProxy;
-	private HttpProxyServer upstreamProxy;
+	private List<HttpProxyServer> localProxies;
 	Logger log = LoggerFactory.getLogger(SimpleProxyChain.class);
 
 
@@ -40,18 +43,22 @@ public class SimpleProxyChain {
 		this(
 				props.getProperty("SimpleProxyChain.upstreamServer", "proxy"),
 				parseInt(props.getProperty("SimpleProxyChain.upstreamPort", "8888")) ,
-				parseInt(props.getProperty("SimpleProxyChain.port", "8888")),
+				parseIntArray(props.getProperty("SimpleProxyChain.port", "8888")),
 				parseInt(props.getProperty("SimpleProxyChain.internalPort", "8889")),
 				props.getProperty("SimpleProxyChain.noproxyHostsRegEx", "--!!!--"),
 				parseBoolean(props.getProperty("SimpleProxyChain.useAuth", "true"))
 			);
 	}
 	
-	public SimpleProxyChain(String upstreamServer, int upstreamPort, int port, int internalPort, String noproxyHostsRegEx, boolean useAuth) {
+	static int[] parseIntArray(String serializedIntArray) {
+		return Stream.of(serializedIntArray.split("\\D+")).mapToInt(Integer::parseInt).toArray();
+	}
+
+	public SimpleProxyChain(String upstreamServer, int upstreamPort, int[] port, int internalPort, String noproxyHostsRegEx, boolean useAuth) {
 		this.UPSTREAM_PORT = upstreamPort;
 		this.UPSTREAM_SERVER = upstreamServer;
 		this.INTERNAL_PORT = internalPort;
-		this.PORT = port;
+		this.LOCAL_PORTS = port;
 		this.NO_PROXY_HOSTS_REGEX = Pattern.compile(noproxyHostsRegEx);
 		
 		log.info(this.toString());
@@ -112,20 +119,22 @@ public class SimpleProxyChain {
 
 	public void start(HttpFiltersSource filters) {
 		internalProxy = DefaultHttpProxyServer.bootstrap().withPort(INTERNAL_PORT).start();
-		upstreamProxy = DefaultHttpProxyServer.bootstrap().withPort(PORT).withChainProxyManager(chainedProxyManager)
+		localProxies = IntStream.of(LOCAL_PORTS).mapToObj(
+				localPort -> 
+				DefaultHttpProxyServer.bootstrap().withPort(localPort).withChainProxyManager(chainedProxyManager)
 				.withFiltersSource(filters)
-				.start();
+				.start()).collect(Collectors.toList());
 	}
 	
 	public  void stop() {
 		internalProxy.stop();
-		upstreamProxy.stop();
+		localProxies.forEach(HttpProxyServer::stop);
 	}
 
 	@Override
 	public String toString() {
 		return "SimpleProxyChain [UPSTREAM_PORT=" + UPSTREAM_PORT + ", UPSTREAM_SERVER=" + UPSTREAM_SERVER
-				+ ", INTERNAL_PORT=" + INTERNAL_PORT + ", PORT=" + PORT + ", NO_PROXY_HOSTS_REGEX="
+				+ ", INTERNAL_PORT=" + INTERNAL_PORT + ", PORT=" + LOCAL_PORTS + ", NO_PROXY_HOSTS_REGEX="
 				+ NO_PROXY_HOSTS_REGEX + "]";
 	}
 	
