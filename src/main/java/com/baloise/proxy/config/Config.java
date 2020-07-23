@@ -11,9 +11,6 @@ import java.nio.file.Paths;
 import java.util.Properties;
 import java.util.function.Consumer;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 public class Config {
 	public final Path PROXY_HOME = Paths.get(System.getProperty("user.home"), ".proxy");
 	public final Path PROXY_PROPERTIES = PROXY_HOME.resolve("proxy.properties");
