@@ -1,5 +1,6 @@
 package com.baloise.proxy;
 
+import java.awt.TrayIcon.MessageType;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
@@ -33,6 +34,7 @@ public class Proxy {
 		})
 		.withMenuEntry("Password", e -> {
 			Password.showDialog();
+			ui.displayMessage("Proxy","new password set", MessageType.INFO);
 		})
 		.withMenuEntry("Test", e -> {
 			test(config.load().getProperty("testURL", "http://example.com/"));
@@ -47,6 +49,8 @@ public class Proxy {
 		} catch (IllegalStateException e) {
 			Password.showDialog();
 		}
+		ui.show();
+		ui.displayMessage("Proxy",simpleProxyChain == null ? "starting ..." : "restarting ...", MessageType.INFO);
 		if(simpleProxyChain != null) simpleProxyChain.stop();
 		simpleProxyChain = new SimpleProxyChain(config.load());
 		log.info("Proxy starting");
@@ -58,7 +62,6 @@ public class Proxy {
 			});
 			simpleProxyChain.stop();
 		}));
-		ui.show();
 	}
 	
 	public static void main(String[] args) {

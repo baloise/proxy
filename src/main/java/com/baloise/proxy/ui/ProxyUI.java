@@ -7,6 +7,7 @@ import java.awt.MenuItem;
 import java.awt.PopupMenu;
 import java.awt.SystemTray;
 import java.awt.TrayIcon;
+import java.awt.TrayIcon.MessageType;
 import java.awt.event.ActionListener;
 import java.awt.geom.Ellipse2D;
 import java.awt.image.BufferedImage;
@@ -23,7 +24,6 @@ public class ProxyUI {
 	public ProxyUI() {
 		tray = SystemTray.getSystemTray();
 		createIcon();
-	    
 		popupMenu = new PopupMenu();
 	}
 	
@@ -37,6 +37,10 @@ public class ProxyUI {
 	    g2d.fill(new Ellipse2D.Float(0, 32, 50, 32));
 	    g2d.dispose();
 	    return image;
+	}
+	
+	public void displayMessage(String caption, String text, MessageType messageType) {
+		tray.getTrayIcons()[0].displayMessage(caption, text, messageType);
 	}
 	
 	public void show() {
