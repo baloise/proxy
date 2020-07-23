@@ -52,7 +52,7 @@ public class FileWatcher extends Thread {
                     if (kind == StandardWatchEventKinds.OVERFLOW) {
                         Thread.yield();
                         continue;
-                    } else if (kind == java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY
+                    } else if (kind == java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY && ev.count() <=1
                             && filename.toString().equals(file.getName()) && file.length() > 0) {
                        	log.info(file + " changed - reloading");
                     	onChange.accept(file);
