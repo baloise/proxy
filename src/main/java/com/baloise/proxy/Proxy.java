@@ -35,7 +35,7 @@ public class Proxy {
 		})
 		.withMenuEntry("Password", e -> {
 			Password.showDialog();
-			ui.displayMessage("Proxy","new password set", MessageType.INFO);
+			start();
 		})
 		.withMenuEntry("Test", e -> {
 			test(config.load().getProperty("testURL", "http://example.com/"));
