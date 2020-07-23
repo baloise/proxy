@@ -83,6 +83,7 @@ public class Proxy {
 			return con.getResponseCode() < 300;
 		} catch (IOException e) {
 			log.warn(e.getMessage(), e);
+			JOptionPane.showMessageDialog(null, e.getMessage() , url, JOptionPane.ERROR_MESSAGE);
 			return false;
 		}
 	}
