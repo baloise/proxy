@@ -8,6 +8,7 @@ import java.net.URL;
 import java.util.Scanner;
 
 import javax.swing.ImageIcon;
+import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 
 import org.slf4j.Logger;
@@ -77,6 +78,7 @@ public class Proxy {
 			try (Scanner scan = new Scanner(con.getInputStream())) {
 				String text = scan.useDelimiter("\\A").next();
 				log.info(text);
+				JOptionPane.showMessageDialog(null, text , url+" - "+con.getResponseCode(),  con.getResponseCode() < 300 ? JOptionPane.INFORMATION_MESSAGE : JOptionPane.ERROR_MESSAGE);
 			}
 			return con.getResponseCode() < 300;
 		} catch (IOException e) {
