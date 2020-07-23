@@ -16,6 +16,8 @@ public class Password {
 	private static String appName = null;
 	private static Icon appIcon = null;
 
+	private static String lazyPwd;
+
 	public static void main(String[] args) throws BackingStoreException {
 		showDialog();
 	}
@@ -25,7 +27,7 @@ public class Password {
 		Password.appIcon = appIcon;
 	}
 
-	public static boolean showDialog() {
+	public static synchronized boolean showDialog() {
 		JPasswordField pass = new JPasswordField(10);
 		String title = "Set windows password";
 		if (appName != null) {
@@ -53,25 +55,32 @@ public class Password {
 		return Preferences.userRoot().node("com").node("baloise").node("windows");
 	}
 
-	private static void set(String pwd) {
-		node().put(PASSWORD, Crypto.userEncrypt(pwd));
+	private static synchronized void set(String pwd) {
+		lazyPwd = Crypto.userEncrypt(pwd);
+		node().put(PASSWORD, lazyPwd);
 	}
 
 	public static void remove() {
+		lazyPwd = null;
 		node().remove(PASSWORD);
 	}
 	
 	public static String get() {
-		String pwd = node().get(PASSWORD, "");
-		if(pwd == null || pwd.trim().isEmpty()) {
+		if(isLazyPwdValid()) return lazyPwd;
+		lazyPwd = node().get(PASSWORD, "");
+		if(!isLazyPwdValid()) {
 			if(showDialog()) {
 				return get();
 			} else {
 				throw new IllegalStateException("You must set the windows password.");
 			}
 		} else {
-			return Crypto.userDecrypt(pwd);
+			return Crypto.userDecrypt(lazyPwd);
 		}
+	}
+
+	private static boolean isLazyPwdValid() {
+		return lazyPwd != null && !lazyPwd.trim().isEmpty();
 	}
 
 }
