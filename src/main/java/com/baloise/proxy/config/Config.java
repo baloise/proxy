@@ -62,6 +62,7 @@ public class Config {
 		p.setProperty("SimpleProxyChain.upstreamServer", "proxy");
 		p.setProperty("SimpleProxyChain.upstreamPort", "8888");
 		p.setProperty("SimpleProxyChain.port", "8888");
+		p.setProperty("SimpleProxyChain.useAuth", "false");
 		p.setProperty("SimpleProxyChain.internalPort", "8889");
 		p.setProperty("SimpleProxyChain.noproxyHostsRegEx", "--!!!--");
 		return p;
