@@ -46,7 +46,7 @@ public class SimpleProxyChain {
 				parseIntArray(props.getProperty("SimpleProxyChain.port", "8888")),
 				parseInt(props.getProperty("SimpleProxyChain.internalPort", "8889")),
 				props.getProperty("SimpleProxyChain.noproxyHostsRegEx", "--!!!--"),
-				parseBoolean(props.getProperty("SimpleProxyChain.useAuth", "true"))
+				parseBoolean(props.getProperty("SimpleProxyChain.useAuth", "false"))
 			);
 	}
 	
@@ -70,7 +70,7 @@ public class SimpleProxyChain {
 				return new InetSocketAddress(UPSTREAM_SERVER, UPSTREAM_PORT);
 			}
 			
-			String authParam = BasicAuth.get();
+			String authParam = useAuth ? BasicAuth.get() : "";
 			
 			@Override
 			public void filterRequest(HttpObject httpObject) {
