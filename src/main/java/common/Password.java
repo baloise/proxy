@@ -2,6 +2,7 @@ package common;
 
 import static javax.swing.JOptionPane.showOptionDialog;
 
+import java.util.Arrays;
 import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
 
@@ -16,6 +17,16 @@ public class Password {
 	private static String appName = null;
 	private static Icon appIcon = null;
 
+	public static boolean hasChild(final Preferences node, final String name){
+		try {
+			String[] childrenNames = node.childrenNames();
+			Arrays.sort(childrenNames);
+			return Arrays.binarySearch(childrenNames, name) > -1;
+		} catch (BackingStoreException e) {
+			return false;
+		}
+	}
+	
 	public static void main(String[] args) throws BackingStoreException {
 		showDialog();
 	}
@@ -27,7 +38,7 @@ public class Password {
 
 	public static boolean showDialog() {
 		JPasswordField pass = new JPasswordField(10);
-		String title = "Set windows password";
+		String title = "Set proxy password";
 		if (appName != null) {
 			title = appName + ": " + title;
 		}
@@ -50,7 +61,8 @@ public class Password {
 	}
 	
 	public static Preferences node() {
-		return Preferences.userRoot().node("com").node("baloise").node("windows");
+		final Preferences baloise = Preferences.userRoot().node("com").node("baloise");
+		return hasChild(baloise, "windows") ? baloise.node("windows") : baloise.node("proxy").node(PASSWORD);
 	}
 
 	private static void set(String pwd) {
@@ -67,7 +79,7 @@ public class Password {
 			if(showDialog()) {
 				return get();
 			} else {
-				throw new IllegalStateException("You must set the windows password.");
+				throw new IllegalStateException("You must set the proxy password.");
 			}
 		} else {
 			return Crypto.userDecrypt(pwd);
