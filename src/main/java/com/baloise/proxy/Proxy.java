@@ -52,7 +52,6 @@ public class Proxy {
 	}
 
 	public void start() {
-		log.info("using slf4j SimpleLogger, for configuration see https://www.slf4j.org/api/org/slf4j/impl/SimpleLogger.html");
 		Properties props = config.load();
 		try {
 			if(parseBoolean(props.getProperty("SimpleProxyChain.useAuth", "false"))) Password.get();			
