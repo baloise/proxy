@@ -19,6 +19,7 @@ import org.slf4j.LoggerFactory;
 
 import com.baloise.proxy.config.Config;
 import com.baloise.proxy.ui.ProxyUI;
+import com.baloise.proxy.ui.ProxyUIAwt;
 
 import common.Password;
 
@@ -31,9 +32,8 @@ public class Proxy {
 
 	public Proxy() {
 		config = new Config();
-		Password.setDialogBrand("Proxy", new ImageIcon(ProxyUI.createIcon()));
-		ui = new ProxyUI()
-		.withMenuEntry("Config", e -> {
+		ui = new ProxyUIAwt()
+		.withMenuEntry("Settings", e -> {
 			config.openProperties();
 		})
 		.withMenuEntry("Password", e -> {
@@ -42,7 +42,11 @@ public class Proxy {
 		})
 		.withMenuEntry("Test", e -> {
 			test(config.load().getProperty("testURL", "http://example.com/"));
+		}).withMenuEntry("Exit", e -> {
+			log.info("Exiting...");
+			System.exit(0);
 		});
+		Password.setDialogBrand("Proxy", new ImageIcon(ui.getIcon()));
 		config.onPropertyChange(f -> start());
 	}
 
@@ -59,14 +63,24 @@ public class Proxy {
 		if(simpleProxyChain != null) simpleProxyChain.stop();
 		simpleProxyChain = new SimpleProxyChain(props);
 		log.info("Proxy starting");
-		simpleProxyChain.start(new FiltersSource407(() -> {
-			log.warn("got 407 - asking for new password");
-			SwingUtilities.invokeLater(()->{
-				Password.showDialog();
-				start();				
-			});
-			simpleProxyChain.stop();
-		}));
+		try {
+			simpleProxyChain.start(new FiltersSource407(() -> {
+				log.warn("got 407 - asking for new password");
+				SwingUtilities.invokeLater(()->{
+					Password.showDialog();
+					start();				
+				});
+				simpleProxyChain.stop();
+			}));
+		} catch (Exception e) {
+			e.printStackTrace();
+			ui.displayMessage("Start up failure", e.getCause().getMessage() +"\nExiting.", MessageType.ERROR);
+			try {
+				Thread.sleep(5000);
+			} catch (InterruptedException e1) {
+			}
+			System.exit(0);System.exit(666);
+		}
 	}
 	
 	public static void main(String[] args) {
