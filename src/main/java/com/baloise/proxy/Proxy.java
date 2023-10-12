@@ -20,6 +20,7 @@ import org.slf4j.LoggerFactory;
 import com.baloise.proxy.config.Config;
 import com.baloise.proxy.ui.ProxyUI;
 import com.baloise.proxy.ui.ProxyUIAwt;
+import com.baloise.proxy.ui.ProxyUINative;
 
 import common.Password;
 
@@ -32,7 +33,7 @@ public class Proxy {
 
 	public Proxy() {
 		config = new Config();
-		ui = new ProxyUIAwt()
+		ui = (System.getProperty("proxy.ui", "native").equalsIgnoreCase("awt") ? new ProxyUIAwt() : new ProxyUINative())
 		.withMenuEntry("Settings", e -> {
 			config.openProperties();
 		})
