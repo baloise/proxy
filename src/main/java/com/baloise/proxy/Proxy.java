@@ -18,10 +18,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.baloise.proxy.config.Config;
+import com.baloise.proxy.logging.LogConfigurator;
 import com.baloise.proxy.ui.ProxyUI;
 import com.baloise.proxy.ui.ProxyUIAwt;
 import com.baloise.proxy.ui.ProxyUINative;
 
+import ch.qos.logback.classic.Level;
 import common.Password;
 
 public class Proxy {
@@ -53,6 +55,7 @@ public class Proxy {
 
 	public void start() {
 		Properties props = config.load();
+		LogConfigurator.getInstance().setLevel(Level.toLevel(props.getProperty("log.level", "info")));
 		try {
 			if(parseBoolean(props.getProperty("SimpleProxyChain.useAuth", "false"))) Password.get();			
 		} catch (IllegalStateException e) {

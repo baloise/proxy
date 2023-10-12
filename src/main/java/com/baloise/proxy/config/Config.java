@@ -59,6 +59,7 @@ public class Config {
 
 	private Properties createDefault() {
 		Properties p = new Properties();
+		p.setProperty("log.level", "info");
 		p.setProperty("SimpleProxyChain.upstreamServer", "proxy");
 		p.setProperty("SimpleProxyChain.upstreamPort", "8888");
 		p.setProperty("SimpleProxyChain.port", "8888");

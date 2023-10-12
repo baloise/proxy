@@ -41,10 +41,9 @@ public class ProxyUINative implements ProxyUI {
 	BufferedImage loadSVG(String name, String color) {
 		try(InputStream inputStream = ProxyUINative.class.getResourceAsStream(name+".svg")) {
 			if(inputStream == null) {
-				log.debug("svg not found: "+name);				
+				log.warn("svg not found: "+name);				
 				return null;
 			}
-			log.debug("loading svg "+name);
 			String xml = new String(inputStream.readAllBytes());
 			String style = String.format("<style type=\"text/css\" > <![CDATA[ path { fill: %s; }]]></style>", color);
 			xml = xml
