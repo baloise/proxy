@@ -3,7 +3,6 @@ package com.baloise.proxy;
 import static java.lang.Boolean.parseBoolean;
 import static java.lang.Integer.parseInt;
 
-import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Properties;
@@ -21,8 +20,6 @@ import org.littleshoot.proxy.HttpProxyServer;
 import org.littleshoot.proxy.impl.DefaultHttpProxyServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.sshtools.twoslices.impl.SysOutToaster;
 
 import common.BasicAuth;
 import common.User;
