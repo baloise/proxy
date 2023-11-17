@@ -10,12 +10,17 @@ import javax.swing.Icon;
 import javax.swing.JOptionPane;
 import javax.swing.JPasswordField;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class Password {
 
 	private static final String PASSWORD = "password";
 	
 	private static String appName = null;
 	private static Icon appIcon = null;
+	
+	static Logger log = LoggerFactory.getLogger(Password.class);
 
 	public static boolean hasChild(final Preferences node, final String name){
 		try {
@@ -82,7 +87,13 @@ public class Password {
 				throw new IllegalStateException("You must set the proxy password.");
 			}
 		} else {
-			return Crypto.userDecrypt(pwd);
+			try {
+				return Crypto.userDecrypt(pwd);
+			} catch (IllegalStateException e) {
+				log.warn(e.getMessage() + " - resetting password.");
+				remove();
+				return get();
+			}
 		}
 	}
 
