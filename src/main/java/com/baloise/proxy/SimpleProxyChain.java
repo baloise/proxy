@@ -1,16 +1,11 @@
 package com.baloise.proxy;
 
-import static java.lang.Boolean.parseBoolean;
-import static java.lang.Integer.parseInt;
-
 import java.net.InetSocketAddress;
 import java.util.List;
-import java.util.Properties;
 import java.util.Queue;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 import org.littleshoot.proxy.ChainedProxy;
 import org.littleshoot.proxy.ChainedProxyAdapter;
@@ -20,6 +15,8 @@ import org.littleshoot.proxy.HttpProxyServer;
 import org.littleshoot.proxy.impl.DefaultHttpProxyServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.baloise.proxy.config.Config;
 
 import common.BasicAuth;
 import common.User;
@@ -39,21 +36,17 @@ public class SimpleProxyChain {
 	Logger log = LoggerFactory.getLogger(SimpleProxyChain.class);
 
 
-	public SimpleProxyChain(Properties props) {
+	public SimpleProxyChain(Config config) {
 		this(
-				props.getProperty("SimpleProxyChain.upstreamServer", "proxy"),
-				parseInt(props.getProperty("SimpleProxyChain.upstreamPort", "8888")) ,
-				parseIntArray(props.getProperty("SimpleProxyChain.port", "8888")),
-				parseInt(props.getProperty("SimpleProxyChain.internalPort", "8889")),
-				props.getProperty("SimpleProxyChain.noproxyHostsRegEx", "--!!!--"),
-				parseBoolean(props.getProperty("SimpleProxyChain.useAuth", "false"))
+				config.getUpstreamServer(),
+				config.getUpstreamPort() ,
+				config.getPort(),
+				config.getInternalPort(),
+				config.getNoproxyHostsRegEx(),
+				config.useAuth()
 			);
 	}
 	
-	static int[] parseIntArray(String serializedIntArray) {
-		return Stream.of(serializedIntArray.split("\\D+")).mapToInt(Integer::parseInt).toArray();
-	}
-
 	public SimpleProxyChain(String upstreamServer, int upstreamPort, int[] port, int internalPort, String noproxyHostsRegEx, boolean useAuth) {
 		this.UPSTREAM_PORT = upstreamPort;
 		this.UPSTREAM_SERVER = upstreamServer;

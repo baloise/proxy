@@ -1,17 +1,12 @@
 package com.baloise.proxy;
 
-import static java.lang.Boolean.parseBoolean;
-
 import java.awt.TrayIcon.MessageType;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.URL;
-import java.util.Properties;
 import java.util.Scanner;
 
-import javax.swing.ImageIcon;
-import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 
 import org.slf4j.Logger;
@@ -20,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import com.baloise.proxy.config.Config;
 import com.baloise.proxy.ui.ProxyUI;
 import com.baloise.proxy.ui.ProxyUIAwt;
+import com.baloise.proxy.ui.ProxyUISwt;
 
 import common.Password;
 
@@ -30,38 +26,47 @@ public class Proxy {
 	private Config config;
 	Logger log = LoggerFactory.getLogger(Proxy.class);
 
+
 	public Proxy() {
 		config = new Config();
-		ui = new ProxyUIAwt()
+		ui = createUI()
 		.withMenuEntry("Settings", e -> {
-			config.openProperties();
+			config.openPropertiesForEditing();
 		})
 		.withMenuEntry("Password", e -> {
-			Password.showDialog();
-			start();
+			if(Password.showDialog()) {
+				start();
+			}
 		})
 		.withMenuEntry("Test", e -> {
-			test(config.load().getProperty("testURL", "http://example.com/"));
+			test(config.getTestURL());
 		}).withMenuEntry("Exit", e -> {
 			log.info("Exiting...");
 			System.exit(0);
 		});
-		Password.setDialogBrand("Proxy", new ImageIcon(ui.getIcon()));
+		Password.ui = ui;
 		config.onPropertyChange(f -> start());
 	}
 
+	ProxyUI createUI() {
+		switch (config.getUI()) {
+			case AWT: return new ProxyUIAwt();
+			default: return new ProxyUISwt();
+		}
+	} 
+	
 	public void start() {
 		log.info("using slf4j SimpleLogger, for configuration see https://www.slf4j.org/api/org/slf4j/impl/SimpleLogger.html");
-		Properties props = config.load();
+		config.reload();
 		try {
-			if(parseBoolean(props.getProperty("SimpleProxyChain.useAuth", "false"))) Password.get();			
+			if(config.useAuth()) Password.get();			
 		} catch (IllegalStateException e) {
 			Password.showDialog();
 		}
-		ui.show();
+		ui.show();				
 		ui.displayMessage("Proxy",simpleProxyChain == null ? "starting ..." : "restarting ...", MessageType.INFO);
 		if(simpleProxyChain != null) simpleProxyChain.stop();
-		simpleProxyChain = new SimpleProxyChain(props);
+		simpleProxyChain = new SimpleProxyChain(config);
 		log.info("Proxy starting");
 		try {
 			simpleProxyChain.start(new FiltersSource407(() -> {
@@ -79,7 +84,7 @@ public class Proxy {
 				Thread.sleep(5000);
 			} catch (InterruptedException e1) {
 			}
-			System.exit(0);System.exit(666);
+			System.exit(666);
 		}
 	}
 	
@@ -93,17 +98,19 @@ public class Proxy {
 		java.net.Proxy proxy = new java.net.Proxy(java.net.Proxy.Type.HTTP, sa);
 		try {
 			HttpURLConnection con = (HttpURLConnection) new URL(url).openConnection(proxy);
+			final boolean success = con.getResponseCode() < 300;
 			try (Scanner scan = new Scanner(con.getInputStream())) {
 				String text = scan.useDelimiter("\\A").next();
-				log.info(text);
-				JOptionPane.showMessageDialog(null, text , url+" - "+con.getResponseCode(),  con.getResponseCode() < 300 ? JOptionPane.INFORMATION_MESSAGE : JOptionPane.ERROR_MESSAGE);
+				log.debug(text);
+				ui.showHTLM(success, url+" - "+con.getResponseCode(), text);
 			}
-			return con.getResponseCode() < 300;
+			return success;
 		} catch (IOException e) {
 			log.warn(e.getMessage(), e);
-			JOptionPane.showMessageDialog(null, e.getMessage() , url, JOptionPane.ERROR_MESSAGE);
+			ui.displayMessage("Test on '"+url+"' failed", e.getMessage(), MessageType.ERROR);
 			return false;
 		}
 	}
-
+	
+	
 }

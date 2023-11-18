@@ -1,17 +1,20 @@
 package com.baloise.proxy.ui;
 
+import static javax.swing.JOptionPane.showOptionDialog;
+
 import java.awt.AWTException;
-import java.awt.Color;
-import java.awt.Graphics2D;
-import java.awt.Image;
 import java.awt.MenuItem;
 import java.awt.PopupMenu;
 import java.awt.SystemTray;
 import java.awt.TrayIcon;
 import java.awt.TrayIcon.MessageType;
 import java.awt.event.ActionListener;
-import java.awt.geom.Ellipse2D;
-import java.awt.image.BufferedImage;
+import java.util.AbstractMap;
+import java.util.Map;
+
+import javax.swing.ImageIcon;
+import javax.swing.JOptionPane;
+import javax.swing.JPasswordField;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,30 +24,11 @@ public class ProxyUIAwt implements ProxyUI {
 	private PopupMenu popupMenu;
 	private transient boolean showing;
 	Logger log = LoggerFactory.getLogger(ProxyUIAwt.class);
-	private Image iconImage;
+	private ImageIcon icon;
 	
 	public ProxyUIAwt() {
 		tray = SystemTray.getSystemTray();
-		createIcon();
 		popupMenu = new PopupMenu();
-		iconImage = createIcon();
-	}
-	
-	private BufferedImage createIcon() {
-		BufferedImage image = new BufferedImage(64, 64, BufferedImage.TYPE_INT_ARGB);
-		Graphics2D g2d = image.createGraphics();
-
-	    g2d.setColor(Color.red);
-	    g2d.fill(new Ellipse2D.Float(0, 0, 50, 32));
-	    g2d.setColor(Color.green);
-	    g2d.fill(new Ellipse2D.Float(0, 32, 50, 32));
-	    g2d.dispose();
-	    return image;
-	}
-	
-	@Override
-	public Image getIcon() {
-	    return iconImage;
 	}
 	
 	@Override
@@ -57,15 +41,15 @@ public class ProxyUIAwt implements ProxyUI {
 		if(showing) return;
 		showing = true;
 		
-		TrayIcon trayIcon = new TrayIcon(createIcon(), "proxy", popupMenu);
+		icon = new ImageIcon(IMAGE.PROXY_ICON.url());
+		TrayIcon trayIcon = new TrayIcon(icon.getImage(), "proxy", popupMenu) {
+		};
 		trayIcon.setImageAutoSize(true);
-		
 		try {
 			tray.add(trayIcon);
 		} catch (AWTException e) {
 			log.error("TrayIcon could not be added.", e);
 		}
-		
 	}
 	
 	@Override
@@ -74,5 +58,24 @@ public class ProxyUIAwt implements ProxyUI {
 		item.addActionListener(actionListener);
 		popupMenu.add(item);
 		return this;
+	}
+	
+	@Override
+	public void showHTLM(boolean success, String title, String html) {
+		JOptionPane.showMessageDialog(null, html , title,  success ? JOptionPane.INFORMATION_MESSAGE : JOptionPane.ERROR_MESSAGE);
+	}
+	
+	@Override
+	public Map.Entry<PasswordDialogResult, String> showPasswordDialog() {
+		final JPasswordField pass = new JPasswordField(10);
+		int option = showOptionDialog(
+				null, 
+				pass, 
+				"Set proxy password",
+				JOptionPane.NO_OPTION,
+				JOptionPane.PLAIN_MESSAGE, 
+				icon,
+				new String[] { "Set password","Remove password", "Cancel" }, "Set password");
+		return new AbstractMap.SimpleEntry<PasswordDialogResult, String>(PasswordDialogResult.ofValue(option), new String(pass.getPassword()));
 	}
 }
