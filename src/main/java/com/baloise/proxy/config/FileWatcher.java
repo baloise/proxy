@@ -63,7 +63,7 @@ public class FileWatcher extends Thread {
                 Thread.yield();
             }
         } catch (Throwable e) {
-            // Log or rethrow the error
+        	log.error(e.getMessage(), e);
         }
     }
 }
