@@ -156,9 +156,7 @@
 				<swt.artifactId>org.eclipse.swt.win32.win32.x86_64</swt.artifactId>
 			</properties>
 			<activation>
-				<os>
-					<family>windows</family>
-				</os>
+				<activeByDefault>false</activeByDefault>
 			</activation>
 		</profile>
 		<profile>
@@ -167,9 +165,7 @@
 				<swt.artifactId>org.eclipse.swt.gtk.linux.x86_64</swt.artifactId>
 			</properties>
 			<activation>
-				<os>
-					<family>unix</family>
-				</os>
+				<activeByDefault>false</activeByDefault>
 			</activation>
 		</profile>
 		<profile>
@@ -178,9 +174,7 @@
 				<swt.artifactId>org.eclipse.swt.cocoa.macosx.x86_64</swt.artifactId>
 			</properties>
 			<activation>
-				<os>
-					<family>mac</family>
-				</os>
+				<activeByDefault>true</activeByDefault>
 			</activation>
 		</profile>
 	</profiles>
