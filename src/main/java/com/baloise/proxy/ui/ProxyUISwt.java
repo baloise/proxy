@@ -1,5 +1,7 @@
 package com.baloise.proxy.ui;
 
+import static java.util.EnumSet.allOf;
+
 import java.awt.TrayIcon.MessageType;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -10,6 +12,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import org.eclipse.jface.dialogs.Dialog;
+import org.eclipse.jface.resource.ImageDescriptor;
+import org.eclipse.jface.resource.ImageRegistry;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.browser.Browser;
 import org.eclipse.swt.browser.TitleEvent;
@@ -31,7 +35,7 @@ public class ProxyUISwt implements ProxyUI, Runnable {
 	private TrayItem item;
 	private transient Map<String, ActionListener> actions = new HashMap<>();
 	private boolean showing;
-	private Image icon, success, failure;
+	private  ImageRegistry images;
 	
 	@Override
 	public ProxyUI withMenuEntry(String label, ActionListener actionListener) {
@@ -51,11 +55,11 @@ public class ProxyUISwt implements ProxyUI, Runnable {
 	public void run() {
 		Display display = new Display();
 		shell = new Shell(display);
-
-		icon = loadImage(IMAGE.PROXY_ICON, (in) -> new Image(display, in));
-		Dialog.setDefaultImage(icon);
-		success = loadImage(IMAGE.SUCCESS, (in) -> new Image(display, in));
-		failure = loadImage(IMAGE.FAILURE, (in) -> new Image(display, in));
+		images = new  ImageRegistry(display);
+		allOf(IMAGE.class).forEach((image)->{
+			images.put(image.toString(), ImageDescriptor.createFromURL(image.url()));
+		});
+		Dialog.setDefaultImage(getImage(IMAGE.PROXY_ICON));
 
 		final Tray tray = display.getSystemTray();
 		if (tray == null) {
@@ -77,7 +81,7 @@ public class ProxyUISwt implements ProxyUI, Runnable {
 					menu.setVisible(true);
 				}
 			});
-			item.setImage(icon);
+			item.setImage(getImage(IMAGE.PROXY_ICON));
 			item.setToolTipText("proxy");
 		}
 		actions.clear();
@@ -85,10 +89,11 @@ public class ProxyUISwt implements ProxyUI, Runnable {
 			if (!display.readAndDispatch())
 				display.sleep();
 		}
-		icon.dispose();
-		success.dispose();
-		failure.dispose();
 		display.dispose();
+	}
+
+	public Image getImage(final IMAGE image) {
+		return images.get(image.toString());
 	}
 
 	@Override
@@ -128,8 +133,8 @@ public class ProxyUISwt implements ProxyUI, Runnable {
 			Display display = new Display();
 			final Shell shell = new Shell(display, SWT.SHELL_TRIM);
 			shell.setLayout(new FillLayout());
-			shell.setText(success + " | "+title);
-			shell.setImage(ok ? success : failure);
+			shell.setText(title);
+			shell.setImage(getImage(ok ? IMAGE.SUCCESS : IMAGE.FAILURE));
 			Browser browser = new Browser(shell, SWT.NONE);
 			browser.addTitleListener((TitleEvent event) -> {
 				shell.setText(title+ " | "+event.title);
