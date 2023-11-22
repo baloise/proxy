@@ -1,3 +1,8 @@
+# Branches
+
+Development take place on the *SWT* branch, which automatically detects your oprating system.
+In order to publish your changes, you need to merge them onto the *win64*,*lin64* and *mac64* branches.
+
 # Icons
 
 To generate png from svg run `mvn -Pdownload-svg2png` to download the jar. 
