@@ -13,7 +13,6 @@ import org.eclipse.jface.dialogs.Dialog;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.browser.Browser;
 import org.eclipse.swt.browser.TitleEvent;
-import org.eclipse.swt.browser.TitleListener;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.widgets.Display;
@@ -25,8 +24,6 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.ToolTip;
 import org.eclipse.swt.widgets.Tray;
 import org.eclipse.swt.widgets.TrayItem;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class ProxyUISwt implements ProxyUI, Runnable {
 
@@ -35,7 +32,6 @@ public class ProxyUISwt implements ProxyUI, Runnable {
 	private transient Map<String, ActionListener> actions = new HashMap<>();
 	private boolean showing;
 	private Image icon, success, failure;
-	Logger log = LoggerFactory.getLogger(ProxyUISwt.class);
 	
 	@Override
 	public ProxyUI withMenuEntry(String label, ActionListener actionListener) {

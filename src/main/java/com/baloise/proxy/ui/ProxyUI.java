@@ -7,10 +7,12 @@ import java.io.InputStream;
 import java.net.URL;
 import java.util.Map.Entry;
 import java.util.function.Function;
-import java.util.function.Supplier;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public interface ProxyUI {
-
+	Logger log = LoggerFactory.getLogger(ProxyUIAwt.class);
 	public static enum PasswordDialogResult {
 		SET, REMOVE, CANCEL;
 
@@ -45,6 +47,7 @@ public interface ProxyUI {
 		try (InputStream in = ProxyUI.class.getResourceAsStream(image.png())) {
 			return loader.apply(in);
 		} catch (IOException e) {
+			log.error("Could not load image "+ image);
 			throw new IllegalStateException(e);
 		}
 	}

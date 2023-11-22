@@ -16,14 +16,10 @@ import javax.swing.ImageIcon;
 import javax.swing.JOptionPane;
 import javax.swing.JPasswordField;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 public class ProxyUIAwt implements ProxyUI {
 	private SystemTray tray;
 	private PopupMenu popupMenu;
 	private transient boolean showing;
-	Logger log = LoggerFactory.getLogger(ProxyUIAwt.class);
 	private ImageIcon icon;
 	
 	public ProxyUIAwt() {
