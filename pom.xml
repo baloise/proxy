@@ -24,10 +24,9 @@
 		</dependency>
 		<dependency>
 			<groupId>org.eclipse.platform</groupId>
-			<artifactId>org.eclipse.swt.win32.win32.x86_64</artifactId>
+			<artifactId>${swt.artifactId}</artifactId>
 			<version>3.123.0</version>
 		</dependency>
-
 		<dependency>
 			<groupId>org.eclipse.platform</groupId>
 			<artifactId>org.eclipse.jface</artifactId>
@@ -59,27 +58,27 @@
 						<goals>
 							<goal>shade</goal>
 						</goals>
-						<configuration>
-							<transformers>
-								<transformer
-									implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-									<mainClass>${exec.mainClass}</mainClass>
-								</transformer>
-							</transformers>
-							<filters>
-								<filter>
-									<artifact>*:*</artifact>
-									<excludes>
-										<exclude>META-INF/*.SF</exclude>
-										<exclude>META-INF/*.DSA</exclude>
-										<exclude>META-INF/*.RSA</exclude>
-									</excludes>
-								</filter>
-							</filters>
-							<createDependencyReducedPom>false</createDependencyReducedPom>
-						</configuration>
 					</execution>
 				</executions>
+				<configuration>
+					<transformers>
+						<transformer
+							implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+							<mainClass>${exec.mainClass}</mainClass>
+						</transformer>
+					</transformers>
+					<filters>
+						<filter>
+							<artifact>*:*</artifact>
+							<excludes>
+								<exclude>META-INF/*.SF</exclude>
+								<exclude>META-INF/*.DSA</exclude>
+								<exclude>META-INF/*.RSA</exclude>
+							</excludes>
+						</filter>
+					</filters>
+					<createDependencyReducedPom>false</createDependencyReducedPom>
+				</configuration>
 			</plugin>
 		</plugins>
 	</build>
@@ -130,7 +129,7 @@
 								</goals>
 								<configuration>
 									<includeProjectDependencies>false</includeProjectDependencies>
-          							<includePluginDependencies>true</includePluginDependencies>
+									<includePluginDependencies>true</includePluginDependencies>
 									<mainClass>org.sterl.svg2png.Main</mainClass>
 									<arguments>
 										<argument>proxy/src/main/resources/com/baloise/proxy/ui</argument>
@@ -151,6 +150,38 @@
 				</plugins>
 			</build>
 		</profile>
-
+		<profile>
+			<id>win64</id>
+			<properties>
+				<swt.artifactId>org.eclipse.swt.win32.win32.x86_64</swt.artifactId>
+			</properties>
+			<activation>
+				<os>
+					<family>windows</family>
+				</os>
+			</activation>
+		</profile>
+		<profile>
+			<id>lin64</id>
+			<properties>
+				<swt.artifactId>org.eclipse.swt.gtk.linux.x86_64</swt.artifactId>
+			</properties>
+			<activation>
+				<os>
+					<family>unix</family>
+				</os>
+			</activation>
+		</profile>
+		<profile>
+			<id>mac64</id>
+			<properties>
+				<swt.artifactId>org.eclipse.swt.cocoa.macosx.x86_64</swt.artifactId>
+			</properties>
+			<activation>
+				<os>
+					<family>mac</family>
+				</os>
+			</activation>
+		</profile>
 	</profiles>
 </project>
