@@ -70,6 +70,7 @@ public class ProxyUISwt implements ProxyUI, Runnable {
 			actions.forEach((label, actionListener) -> {
 				MenuItem mi = new MenuItem(menu, SWT.PUSH);
 				mi.setText(label);
+				mi.setImage(getImage(IMAGE.valueOf(label.toUpperCase())));
 				mi.addListener(SWT.Selection, new Listener() {
 					public void handleEvent(Event event) {
 						new Thread(() -> actionListener.actionPerformed(new ActionEvent(mi, ActionEvent.ACTION_PERFORMED, label))).start();
