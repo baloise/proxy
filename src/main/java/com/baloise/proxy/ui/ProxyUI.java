@@ -43,15 +43,6 @@ public interface ProxyUI {
 
 	void displayMessage(String caption, String text, MessageType messageType);
 
-	default <T> T loadImage(IMAGE image, Function<InputStream, T> loader) {
-		try (InputStream in = ProxyUI.class.getResourceAsStream(image.png())) {
-			return loader.apply(in);
-		} catch (IOException e) {
-			log.error("Could not load image "+ image);
-			throw new IllegalStateException(e);
-		}
-	}
-	
 	void showHTLM(boolean success, String title, String html);
 
 	Entry<PasswordDialogResult, String> showPasswordDialog();
