@@ -5,23 +5,22 @@ An minimal authenticating HTTP(S) forward proxy based on https://github.com/adam
 
 # Installation
 
-## on Windows
+## with Powershell
 
 ### Download the binary. (works also for updates)
 
 ```
-if not exist %userprofile%\.proxy mkdir %userprofile%\.proxy
+md "$env:USERPROFILE\.proxy2" -ea 0 | Out-Null; iwr https://jitpack.io/com/github/baloise/proxy/win64-SNAPSHOT/proxy-win64-SNAPSHOT.jar -OutFile $env:USERPROFILE\.proxy2\proxy.jar
 
-powershell -Command "$proxy = [System.Net.WebRequest]::GetSystemWebProxy();$proxy.Credentials = [System.Net.CredentialCache]::DefaultCredentials;$wc = new-object system.net.WebClient;$wc.proxy = $proxy;$wc.DownloadFile('https://jitpack.io/com/github/baloise/proxy/win64-SNAPSHOT/proxy-win64-SNAPSHOT.jar', '%USERPROFILE%/.proxy/proxy.jar');"
 ```
 You can look up the current proxy version @ https://jitpack.io/com/github/baloise/proxy/proxy/-SNAPSHOT/maven-metadata.xml
 
 ### Create start up item
 ```
-echo powershell -Command Start-Process 'javaw.exe' '-jar "%userprofile%\.proxy\proxy.jar"' -NoNewWindow > "%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\proxy.bat"
+"powershell -Command Start-Process 'javaw.exe' '-jar $env:USERPROFILE\.proxy\proxy.jar' -NoNewWindow" | Out-File -FilePath $env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\proxy.bat
 ```
 
 ### Run
 ```
-powershell -Command Start-Process 'javaw.exe' '-jar "%userprofile%\.proxy\proxy.jar"' -NoNewWindow
+Start-Process 'javaw.exe' "-jar $env:USERPROFILE\.proxy\proxy.jar" -NoNewWindow
 ```
