@@ -5,7 +5,7 @@ An minimal authenticating HTTP(S) forward proxy based on https://github.com/adam
 
 # Installation
 
-## with Powershell
+## With Powershell on Windows
 
 ### Download the binary. (works also for updates)
 
@@ -17,7 +17,7 @@ You can look up the current proxy version @ https://jitpack.io/com/github/balois
 
 ### Create start up item
 ```
-"powershell -Command Start-Process 'javaw.exe' '-jar $env:USERPROFILE\.proxy\proxy.jar' -NoNewWindow" | Out-File -FilePath $env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\proxy.bat
+"powershell -Command Start-Process 'javaw.exe' '-jar $env:USERPROFILE\.proxy\proxy.jar' -NoNewWindow" | Out-File -Encoding oem -FilePath "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\proxy.bat"
 ```
 
 ### Run
