@@ -10,7 +10,7 @@ An minimal authenticating HTTP(S) forward proxy based on https://github.com/adam
 ### Download the binary. (works also for updates)
 
 ```
-md "$env:USERPROFILE\.proxy2" -ea 0 | Out-Null; iwr https://jitpack.io/com/github/baloise/proxy/win64-SNAPSHOT/proxy-win64-SNAPSHOT.jar -OutFile $env:USERPROFILE\.proxy2\proxy.jar
+md "$env:USERPROFILE\.proxy" -ea 0 | Out-Null; iwr https://jitpack.io/com/github/baloise/proxy/win64-SNAPSHOT/proxy-win64-SNAPSHOT.jar -OutFile $env:USERPROFILE\.proxy\proxy.jar
 
 ```
 You can look up the current proxy version @ https://jitpack.io/com/github/baloise/proxy/proxy/-SNAPSHOT/maven-metadata.xml
