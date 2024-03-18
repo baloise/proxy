@@ -2,6 +2,8 @@ package com.baloise.proxy.config;
 
 import static java.lang.Boolean.parseBoolean;
 import static java.lang.Integer.parseInt;
+import static java.lang.System.getenv;
+import static java.util.Arrays.asList;
 
 import java.awt.Desktop;
 import java.io.File;
@@ -11,6 +13,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
@@ -38,8 +41,17 @@ public class Config {
 		defaultProperties.setProperty(SIMPLE_PROXY_CHAIN_NOPROXY_HOSTS_REG_EX, "--!!!--");
 		defaultProperties.setProperty(SIMPLE_PROXY_CHAIN_INTERNAL_PORT, "8889");
 		defaultProperties.setProperty(SIMPLE_PROXY_CHAIN_PORT, "8888");
-		defaultProperties.setProperty(SIMPLE_PROXY_CHAIN_UPSTREAM_PORT, "8888");
-		defaultProperties.setProperty(SIMPLE_PROXY_CHAIN_UPSTREAM_SERVER, "proxy");
+		
+		String[] proxyEnv = asList(
+				getenv("HTTPS_PROXY"),
+				getenv("https_proxy"),
+				getenv("HTTP_PROXY"),
+				getenv("http_proxy")
+			).stream().filter(Objects::nonNull).findFirst()
+				.orElse("proxy:8888").replaceFirst("(?i)HTTP(S)?://", "").split(":");
+		
+		defaultProperties.setProperty(SIMPLE_PROXY_CHAIN_UPSTREAM_SERVER, proxyEnv[0]);
+		defaultProperties.setProperty(SIMPLE_PROXY_CHAIN_UPSTREAM_PORT, proxyEnv[1]);
 		defaultProperties.setProperty(SIMPLE_PROXY_CHAIN_USE_AUTH, "false");
 		defaultProperties.setProperty(UI, "SWT");
 		
