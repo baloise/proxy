@@ -120,7 +120,7 @@
 					<plugin>
 						<groupId>org.codehaus.mojo</groupId>
 						<artifactId>exec-maven-plugin</artifactId>
-						<version>3.1.0</version>
+						<version>3.2.0</version>
 						<executions>
 							<execution>
 								<phase>generate-resources</phase>
@@ -132,7 +132,7 @@
 									<includePluginDependencies>true</includePluginDependencies>
 									<mainClass>org.sterl.svg2png.Main</mainClass>
 									<arguments>
-										<argument>proxy/src/main/resources/com/baloise/proxy/ui</argument>
+										<argument>src/main/resources/com/baloise/proxy/ui</argument>
 									</arguments>
 								</configuration>
 							</execution>
