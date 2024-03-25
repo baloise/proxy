@@ -1,19 +1,20 @@
 package com.baloise.proxy.ui;
 
+import static java.util.Arrays.asList;
 import static java.util.EnumSet.allOf;
 
 import java.awt.TrayIcon.MessageType;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
 import org.eclipse.jface.dialogs.Dialog;
+import org.eclipse.jface.dialogs.PlainMessageDialog;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.resource.ImageRegistry;
+import org.eclipse.jface.window.Window;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.browser.Browser;
 import org.eclipse.swt.browser.TitleEvent;
@@ -99,8 +100,6 @@ public class ProxyUISwt implements ProxyUI, Runnable {
 
 	@Override
 	public void displayMessage(String caption, String text, MessageType messageType) {
-		int retry = 17;
-		while (shell == null && retry-- > 0) sleep79();
 		Display.getDefault().asyncExec(() -> {
 			final ToolTip tip = new ToolTip(shell, SWT.BALLOON | mapMessageType(messageType));
 			tip.setMessage(text);
@@ -108,10 +107,6 @@ public class ProxyUISwt implements ProxyUI, Runnable {
 			item.setToolTip(tip);
 			tip.setVisible(true);
 		});
-	}
-
-	private void sleep79() {
-		try { Thread.sleep(79); } catch (InterruptedException e) {}
 	}
 
 	protected int mapMessageType(MessageType messageType) {
@@ -153,14 +148,23 @@ public class ProxyUISwt implements ProxyUI, Runnable {
 	
 	@Override
 	public Entry<PasswordDialogResult, String> showPasswordDialog() {
-		List<PasswordDialogSwt> diaL = new ArrayList<>(1);
+		PasswordDialogSwt dialog = new PasswordDialogSwt(shell);
 		Display.getDefault().syncExec(()->{
-			PasswordDialogSwt dialog = new PasswordDialogSwt(shell);
-			diaL.add(dialog);
 			dialog.open();
 		});
-		while(diaL.isEmpty() || diaL.get(0).result == null) sleep79();
-		return diaL.get(0).result;
+		return dialog.result;
 	}
 
+	@Override
+	public boolean prompt(String caption, String text) {
+		PlainMessageDialog dialog = PlainMessageDialog.getBuilder(shell, caption)
+				.message(text).buttonLabels(asList("Ok", "Cancel"))
+				.build();
+		Display.getDefault().syncExec(new Runnable() {
+		    public void run() {
+		    	dialog.open();
+		    }
+		});
+		return dialog.getReturnCode() == Window.OK;
+	}
 }

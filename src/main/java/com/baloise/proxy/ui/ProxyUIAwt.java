@@ -121,4 +121,10 @@ public class ProxyUIAwt implements ProxyUI {
 				new String[] { "Set password","Remove password", "Cancel" }, "Set password");
 		return new AbstractMap.SimpleEntry<PasswordDialogResult, String>(PasswordDialogResult.ofValue(option), new String(pass.getPassword()));
 	}
+
+	@Override
+	public boolean prompt(String caption, String text) {
+		return JOptionPane.showConfirmDialog(null, text, caption, JOptionPane.OK_CANCEL_OPTION) ==0;
+	}
+	
 }
