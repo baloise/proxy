@@ -21,7 +21,11 @@ import java.util.stream.Stream;
 
 public class Config {
 	
-	public static enum UIType {	SWT, AWT;}
+	public static enum UIType {	SWT, AWT;
+		public static UIType parse(String uiType) {
+			return uiType != null && uiType.toLowerCase().contains("awt") ? AWT : SWT;
+		}
+	}
 	
 	private static final String TEST_URL = "testURL";
 	private static final String SIMPLE_PROXY_CHAIN_NOPROXY_HOSTS_REG_EX = "SimpleProxyChain.noproxyHostsRegEx";
@@ -173,7 +177,7 @@ public class Config {
 	}
 	
 	public UIType getUI() {
-		return UIType.valueOf(getProperty(UI));
+		return UIType.parse(getProperty(UI));
 	}
 
 }
