@@ -1,19 +1,20 @@
 package com.baloise.proxy.ui;
 
+import static java.util.Arrays.asList;
 import static java.util.EnumSet.allOf;
 
 import java.awt.TrayIcon.MessageType;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
 import org.eclipse.jface.dialogs.Dialog;
+import org.eclipse.jface.dialogs.PlainMessageDialog;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.resource.ImageRegistry;
+import org.eclipse.jface.window.Window;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.browser.Browser;
 import org.eclipse.swt.browser.TitleEvent;
@@ -31,11 +32,13 @@ import org.eclipse.swt.widgets.TrayItem;
 
 public class ProxyUISwt implements ProxyUI, Runnable {
 
+	
 	private Shell shell;
 	private TrayItem item;
 	private transient Map<String, ActionListener> actions = new HashMap<>();
 	private boolean showing;
 	private  ImageRegistry images;
+	private Display display;
 	
 	@Override
 	public ProxyUI withMenuEntry(String label, ActionListener actionListener) {
@@ -49,11 +52,19 @@ public class ProxyUISwt implements ProxyUI, Runnable {
 			return;
 		showing = true;
 		new Thread(this).start();
+		while(shell == null) {
+			log.debug("waiting for shell creation...");
+			try {
+				Thread.sleep(79);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
 	}
 
 	@Override
 	public void run() {
-		Display display = new Display();
+		display = new Display();
 		shell = new Shell(display);
 		images = new  ImageRegistry(display);
 		allOf(IMAGE.class).forEach((image)->{
@@ -90,6 +101,7 @@ public class ProxyUISwt implements ProxyUI, Runnable {
 			if (!display.readAndDispatch())
 				display.sleep();
 		}
+		tray.dispose();
 		display.dispose();
 	}
 
@@ -99,19 +111,13 @@ public class ProxyUISwt implements ProxyUI, Runnable {
 
 	@Override
 	public void displayMessage(String caption, String text, MessageType messageType) {
-		int retry = 17;
-		while (shell == null && retry-- > 0) sleep79();
-		Display.getDefault().asyncExec(() -> {
+		display.asyncExec(() -> {
 			final ToolTip tip = new ToolTip(shell, SWT.BALLOON | mapMessageType(messageType));
 			tip.setMessage(text);
 			tip.setText(caption);
 			item.setToolTip(tip);
 			tip.setVisible(true);
 		});
-	}
-
-	private void sleep79() {
-		try { Thread.sleep(79); } catch (InterruptedException e) {}
 	}
 
 	protected int mapMessageType(MessageType messageType) {
@@ -130,9 +136,8 @@ public class ProxyUISwt implements ProxyUI, Runnable {
 
 	@Override
 	public void showHTLM(boolean ok, String title, String html) {
-		new Thread(() -> {
-			Display display = new Display();
-			final Shell shell = new Shell(display, SWT.SHELL_TRIM);
+		display.asyncExec(()->{
+			Shell shell = new Shell(display);
 			shell.setLayout(new FillLayout());
 			shell.setText(title);
 			shell.setImage(getImage(ok ? IMAGE.SUCCESS : IMAGE.FAILURE));
@@ -141,26 +146,30 @@ public class ProxyUISwt implements ProxyUI, Runnable {
 				shell.setText(title+ " | "+event.title);
 			});
 			browser.setBounds(0,0,600,400);
+			browser.setText(html);
 			shell.pack();
 			shell.open();
-			browser.setText(html);
-			while (!shell.isDisposed())
-				if (!display.readAndDispatch())
-					display.sleep();
-		}).start();
+		});
 	}
 
 	
 	@Override
 	public Entry<PasswordDialogResult, String> showPasswordDialog() {
-		List<PasswordDialogSwt> diaL = new ArrayList<>(1);
-		Display.getDefault().syncExec(()->{
-			PasswordDialogSwt dialog = new PasswordDialogSwt(shell);
-			diaL.add(dialog);
+		PasswordDialogSwt dialog = new PasswordDialogSwt(shell);
+		display.syncExec(()->{
 			dialog.open();
 		});
-		while(diaL.isEmpty() || diaL.get(0).result == null) sleep79();
-		return diaL.get(0).result;
+		return dialog.result;
 	}
 
+	@Override
+	public boolean prompt(String caption, String text) {
+		PlainMessageDialog dialog = PlainMessageDialog.getBuilder(shell, caption)
+				.message(text).buttonLabels(asList("Ok", "Cancel"))
+				.build();
+		display.syncExec(() -> {
+		    	dialog.open();
+		});
+		return dialog.getReturnCode() == Window.OK;
+	}
 }

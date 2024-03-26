@@ -24,7 +24,7 @@ public interface ProxyUI {
 	}
 
 	public static enum IMAGE {
-		EXIT, FAILURE, PASSWORD, PROXY_ICON, SETTINGS, SUCCESS, TEST;
+		EXIT, FAILURE, PASSWORD, PROXY_ICON, RESTART, SETTINGS, SUCCESS, TEST;
 
 		public URL url() {
 			return ProxyUI.class.getResource(toString().toLowerCase() + ".png");
@@ -35,9 +35,16 @@ public interface ProxyUI {
 
 	void show();
 
+	
+	default void displayMessage(String caption, String text) {
+		displayMessage(caption, text, MessageType.INFO);
+	}
+	
 	void displayMessage(String caption, String text, MessageType messageType);
 
 	void showHTLM(boolean success, String title, String html);
+	
+	boolean prompt(String caption, String text);
 
 	Entry<PasswordDialogResult, String> showPasswordDialog();
 

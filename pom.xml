@@ -16,11 +16,17 @@
 			<groupId>org.littleshoot</groupId>
 			<artifactId>littleproxy</artifactId>
 			<version>1.1.2</version>
+			<exclusions>
+				<exclusion>
+					<groupId>org.slf4j</groupId>
+					<artifactId>slf4j-api</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 		<dependency>
 			<groupId>org.slf4j</groupId>
-			<artifactId>slf4j-simple</artifactId>
-			<version>1.7.26</version>
+			<artifactId>slf4j-jdk14</artifactId>
+			<version>2.0.12</version>
 		</dependency>
 		<dependency>
 			<groupId>org.eclipse.platform</groupId>
@@ -30,7 +36,7 @@
 		<dependency>
 			<groupId>org.eclipse.platform</groupId>
 			<artifactId>org.eclipse.jface</artifactId>
-			<version>3.29.0</version>
+			<version>3.33.0</version>
 			<exclusions>
 				<exclusion>
 					<groupId>org.eclipse.platform</groupId>
@@ -120,7 +126,7 @@
 					<plugin>
 						<groupId>org.codehaus.mojo</groupId>
 						<artifactId>exec-maven-plugin</artifactId>
-						<version>3.1.0</version>
+						<version>3.2.0</version>
 						<executions>
 							<execution>
 								<phase>generate-resources</phase>
@@ -132,7 +138,8 @@
 									<includePluginDependencies>true</includePluginDependencies>
 									<mainClass>org.sterl.svg2png.Main</mainClass>
 									<arguments>
-										<argument>proxy/src/main/resources/com/baloise/proxy/ui</argument>
+										<argument>
+											src/main/resources/com/baloise/proxy/ui</argument>
 									</arguments>
 								</configuration>
 							</execution>

@@ -21,7 +21,7 @@ import com.baloise.proxy.ui.ProxyUI.PasswordDialogResult;
 
 public class PasswordDialogSwt extends Dialog {
 
-	public Map.Entry<PasswordDialogResult, String> result;
+	public Map.Entry<PasswordDialogResult, String> result = new AbstractMap.SimpleEntry<PasswordDialogResult, String>(PasswordDialogResult.CANCEL, "");
 	private Text password;
 	private String passwordString;
 
