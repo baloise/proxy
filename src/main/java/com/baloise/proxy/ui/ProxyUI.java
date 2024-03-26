@@ -35,6 +35,11 @@ public interface ProxyUI {
 
 	void show();
 
+	
+	default void displayMessage(String caption, String text) {
+		displayMessage(caption, text, MessageType.INFO);
+	}
+	
 	void displayMessage(String caption, String text, MessageType messageType);
 
 	void showHTLM(boolean success, String title, String html);
