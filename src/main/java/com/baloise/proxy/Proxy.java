@@ -29,6 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.baloise.proxy.config.Config;
+import com.baloise.proxy.config.Config.UIType;
 import com.baloise.proxy.ui.ProxyUI;
 import com.baloise.proxy.ui.ProxyUIAwt;
 import com.baloise.proxy.ui.ProxyUISwt;
@@ -66,7 +67,19 @@ public class Proxy {
 			System.exit(0);
 		});
 		Password.ui = ui;
-		config.onPropertyChange(f -> start());
+		config.onPropertyChange(f -> {
+			UIType uiOld  = config.getUI();
+			config.reload();
+			if(!config.getUI().equals(uiOld)) {
+				// TODO can we recreate the UI without restarting the VM?
+				String msg = "UI changed. Restarting proxy virtual machine.";
+				log.info(msg);
+				ui.displayMessage("Proxy restarting", msg);
+				restart();
+			} else {
+				start();
+			}
+		});
 	}
 
 	private void restart() {
@@ -106,10 +119,11 @@ public class Proxy {
 		} catch (IllegalStateException e) {
 			Password.showDialog();
 		}
+		boolean restarting = simpleProxyChain != null;
 		ui.show();				
-		ui.displayMessage("Proxy",simpleProxyChain == null ? "starting ..." : "restarting ...", MessageType.INFO);		
+		ui.displayMessage("Proxy", restarting ? "restarting ..." : "starting ...");		
 		checkProxyEnv();
-		if(simpleProxyChain != null) simpleProxyChain.stop();
+		if(restarting) simpleProxyChain.stop();
 		simpleProxyChain = new SimpleProxyChain(config);
 		log.info("Proxy starting");
 		try {
@@ -219,7 +233,7 @@ public class Proxy {
 						String newProxyEnv = String.format("http://%s:%s", thisProxyHost, thisProxyPort);
 						setEnv("http_proxy", newProxyEnv);
 						setEnv("https_proxy", newProxyEnv);
-						ui.displayMessage("Updated environment", format("Set http_proxy and https_proxy to\n%s",  newProxyEnv), MessageType.INFO);
+						ui.displayMessage("Updated environment", format("Set http_proxy and https_proxy to\n%s",  newProxyEnv));
 					}
 				} else if(ui.prompt("Ignore differences", "Do you want disable detecting JVM property and system environment improvements on start up?" )) {
 					config.setCheckEnvironment(false);
@@ -284,7 +298,7 @@ public class Proxy {
 		toolOptions.putAll(options);
 		String toolsOptNew = generateToolOptions(toolOptions);
 		setEnv("JAVA_TOOL_OPTIONS", toolsOptNew);
-		ui.displayMessage("Updated JAVA_TOOL_OPTIONS", format("Updated JAVA_TOOL_OPTIONS from \n%s\nto\n%s",  toolsOptOld, toolsOptNew), MessageType.INFO);
+		ui.displayMessage("Updated JAVA_TOOL_OPTIONS", format("Updated JAVA_TOOL_OPTIONS from \n%s\nto\n%s",  toolsOptOld, toolsOptNew));
 	}
 	
 	static Map<String, String> parseToolOptions(String options) {
