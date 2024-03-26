@@ -15,5 +15,5 @@ public class ConfigTest {
 		assertArrayEquals(parseIntArray("8888 lksdlf; <>, 3128"), parseIntArray("8888, 3128"));
 		assertArrayEquals(new int[] {}, parseIntArray("sdfsdf"));
 	}
-
+	
 }
