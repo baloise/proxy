@@ -1,6 +1,8 @@
 package com.baloise.proxy;
 
+import static com.baloise.proxy.ImportTLSCert.tool;
 import static java.lang.String.format;
+import static java.util.Arrays.asList;
 
 import java.awt.TrayIcon.MessageType;
 import java.io.File;
@@ -14,7 +16,9 @@ import java.security.NoSuchAlgorithmException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -39,6 +43,7 @@ import common.Password;
 
 public class Proxy {
 	
+	private static final String ARG_TEST = "test";
 	private ProxyUI ui;
 	private SimpleProxyChain simpleProxyChain;
 	private Config config;
@@ -57,7 +62,7 @@ public class Proxy {
 			}
 		})
 		.withMenuEntry("Test", e -> {
-			test(config.getTestURL());
+			test();
 		})
 		.withMenuEntry("Restart", e -> {
 			restart();
@@ -82,19 +87,18 @@ public class Proxy {
 		});
 	}
 
-	private void restart() {
+	private void restart(String ... args) {
 		log.info("restarting");
 		simpleProxyChain.stop();
-		System.getProperties().list(System.out);
-		System.out.println(System.getProperty("java.class.path"));
-		System.out.println(System.getProperty("java.home"));
 		try {
-			new ProcessBuilder(
-					ImportTLSCert.tool("java"), 
+			List<String> cmd = new ArrayList<>(asList(
+					tool("java"), 
 					"-cp",
 					System.getProperty("java.class.path"),
 					Proxy.class.getName()
-				)
+					));
+			cmd.addAll(asList(args));
+			new ProcessBuilder(cmd)
 				.inheritIO()
 				.start();
 		} catch (IOException e) {
@@ -111,8 +115,8 @@ public class Proxy {
 		}
 	} 
 	
-	public void start() {
-		log.info("using slf4j SimpleLogger, for configuration see https://www.slf4j.org/api/org/slf4j/impl/SimpleLogger.html");
+	public void start(String ... args) {
+		final List<String> argList = asList(args);
 		config.reload();
 		try {
 			if(config.useAuth()) Password.get();			
@@ -121,7 +125,9 @@ public class Proxy {
 		}
 		boolean restarting = simpleProxyChain != null;
 		ui.show();				
-		ui.displayMessage("Proxy", restarting ? "restarting ..." : "starting ...");		
+		String startRestart = restarting ? "restarting ..." : "starting ...";
+		log.info("proxy "+startRestart);
+		ui.displayMessage("Proxy", startRestart);		
 		checkProxyEnv();
 		if(restarting) simpleProxyChain.stop();
 		simpleProxyChain = new SimpleProxyChain(config);
@@ -144,16 +150,21 @@ public class Proxy {
 			}
 			System.exit(666);
 		}
+		if(argList.contains(ARG_TEST)) {
+			test();
+		}
+		log.info("proxy started");
 	}
 	
 	public static void main(String[] args) throws IOException {
 		try(InputStream logProps = Proxy.class.getResourceAsStream("logging.properties")){
 			LogManager.getLogManager().readConfiguration(logProps);
 		}
-		new Proxy().start();
+		new Proxy().start(args);
 	}
 
-	public boolean test(String url) {
+	public boolean test() {
+		String url = config.getTestURL();
 		InetSocketAddress sa = new InetSocketAddress("127.0.0.1", simpleProxyChain.LOCAL_PORTS[0]);
 		log.info("testing "+sa);
 		java.net.Proxy proxy = new java.net.Proxy(java.net.Proxy.Type.HTTP, sa);
@@ -184,7 +195,7 @@ public class Proxy {
 							certFile.getAbsolutePath()
 							);
 					checkTrustStoreProperty(keystore);
-					restart();
+					restart(ARG_TEST);
 				}
 			} catch (IOException | KeyManagementException | NoSuchAlgorithmException | CertificateEncodingException | InterruptedException e1) {
 				e1.printStackTrace();
