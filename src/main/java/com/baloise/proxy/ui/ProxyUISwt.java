@@ -32,11 +32,13 @@ import org.eclipse.swt.widgets.TrayItem;
 
 public class ProxyUISwt implements ProxyUI, Runnable {
 
+	
 	private Shell shell;
 	private TrayItem item;
 	private transient Map<String, ActionListener> actions = new HashMap<>();
 	private boolean showing;
 	private  ImageRegistry images;
+	private Display display;
 	
 	@Override
 	public ProxyUI withMenuEntry(String label, ActionListener actionListener) {
@@ -50,11 +52,19 @@ public class ProxyUISwt implements ProxyUI, Runnable {
 			return;
 		showing = true;
 		new Thread(this).start();
+		while(shell == null) {
+			log.debug("waiting for shell creation...");
+			try {
+				Thread.sleep(79);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
 	}
 
 	@Override
 	public void run() {
-		Display display = new Display();
+		display = new Display();
 		shell = new Shell(display);
 		images = new  ImageRegistry(display);
 		allOf(IMAGE.class).forEach((image)->{
@@ -91,6 +101,7 @@ public class ProxyUISwt implements ProxyUI, Runnable {
 			if (!display.readAndDispatch())
 				display.sleep();
 		}
+		tray.dispose();
 		display.dispose();
 	}
 
@@ -100,7 +111,7 @@ public class ProxyUISwt implements ProxyUI, Runnable {
 
 	@Override
 	public void displayMessage(String caption, String text, MessageType messageType) {
-		Display.getDefault().asyncExec(() -> {
+		display.asyncExec(() -> {
 			final ToolTip tip = new ToolTip(shell, SWT.BALLOON | mapMessageType(messageType));
 			tip.setMessage(text);
 			tip.setText(caption);
@@ -125,9 +136,8 @@ public class ProxyUISwt implements ProxyUI, Runnable {
 
 	@Override
 	public void showHTLM(boolean ok, String title, String html) {
-		new Thread(() -> {
-			Display display = new Display();
-			final Shell shell = new Shell(display, SWT.SHELL_TRIM);
+		display.asyncExec(()->{
+			Shell shell = new Shell(display);
 			shell.setLayout(new FillLayout());
 			shell.setText(title);
 			shell.setImage(getImage(ok ? IMAGE.SUCCESS : IMAGE.FAILURE));
@@ -136,20 +146,17 @@ public class ProxyUISwt implements ProxyUI, Runnable {
 				shell.setText(title+ " | "+event.title);
 			});
 			browser.setBounds(0,0,600,400);
+			browser.setText(html);
 			shell.pack();
 			shell.open();
-			browser.setText(html);
-			while (!shell.isDisposed())
-				if (!display.readAndDispatch())
-					display.sleep();
-		}).start();
+		});
 	}
 
 	
 	@Override
 	public Entry<PasswordDialogResult, String> showPasswordDialog() {
 		PasswordDialogSwt dialog = new PasswordDialogSwt(shell);
-		Display.getDefault().syncExec(()->{
+		display.syncExec(()->{
 			dialog.open();
 		});
 		return dialog.result;
@@ -160,10 +167,8 @@ public class ProxyUISwt implements ProxyUI, Runnable {
 		PlainMessageDialog dialog = PlainMessageDialog.getBuilder(shell, caption)
 				.message(text).buttonLabels(asList("Ok", "Cancel"))
 				.build();
-		Display.getDefault().syncExec(new Runnable() {
-		    public void run() {
+		display.syncExec(() -> {
 		    	dialog.open();
-		    }
 		});
 		return dialog.getReturnCode() == Window.OK;
 	}
