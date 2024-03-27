@@ -119,7 +119,7 @@ public class ProxyUIAwt implements ProxyUI {
 				JOptionPane.PLAIN_MESSAGE, 
 				icon,
 				new String[] { "Set password","Remove password", "Cancel" }, "Set password");
-		return new AbstractMap.SimpleEntry<PasswordDialogResult, String>(PasswordDialogResult.ofValue(option), new String(pass.getPassword()));
+		return new AbstractMap.SimpleEntry<>(PasswordDialogResult.ofValue(option), new String(pass.getPassword()));
 	}
 
 	@Override

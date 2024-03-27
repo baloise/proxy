@@ -21,7 +21,7 @@ import com.baloise.proxy.ui.ProxyUI.PasswordDialogResult;
 
 public class PasswordDialogSwt extends Dialog {
 
-	public Map.Entry<PasswordDialogResult, String> result = new AbstractMap.SimpleEntry<PasswordDialogResult, String>(PasswordDialogResult.CANCEL, "");
+	public Map.Entry<PasswordDialogResult, String> result = new AbstractMap.SimpleEntry<>(PasswordDialogResult.CANCEL, "");
 	private Text password;
 	private String passwordString;
 
@@ -41,7 +41,7 @@ public class PasswordDialogSwt extends Dialog {
 		button.addListener(SWT.Selection, new Listener() {
 			@Override
 			public void handleEvent(Event event) {
-				result = new AbstractMap.SimpleEntry<PasswordDialogResult, String>(res, pwd);
+				result = new AbstractMap.SimpleEntry<>(res, pwd);
 				close();
 			}
 		});
