@@ -38,38 +38,33 @@ function unzip ($src, $dst){
 }
 
 
-if (Test-Path -Path $jreFolder) {
-    echo  "jre OK" 
-} else {
+if (!(Test-Path -Path $jreFolder)) {
     Write-Output "$jreFolder not found ... downloading"
  	$JRE_ZIP="$proxyFolder\jre21.zip"
 	iwr "https://api.foojay.io/disco/v3.0/directuris?distro=temurin&javafx_bundled=false&libc_type=c_std_lib&archive_type=zip&operating_system=windows&package_type=jre&version=21&architecture=x64&latest=available"  -OutFile $JRE_ZIP
 	$jreFolderName = unzip $JRE_ZIP $proxyFolder
     Remove-Item $JRE_ZIP
     Move-Item -Path "$proxyFolder\$jreFolderName" -Destination $jreFolder
-    echo  "jre OK"
 }
+echo  "jre OK"
 
-if (!(Test-Path -Path $env:USERPROFILE\.proxy\proxy.jar)) {
-   iwr https://jitpack.io/com/github/baloise/proxy/win64-SNAPSHOT/proxy-win64-SNAPSHOT.jar -OutFile $env:USERPROFILE\.proxy\proxy.jar
-}    
+iwr https://jitpack.io/com/github/baloise/proxy/win64-SNAPSHOT/proxy-win64-SNAPSHOT.jar -OutFile $env:USERPROFILE\.proxy\proxy.jar
 echo  "proxy OK"
 
-if (!(Test-Path -Path "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\proxy.bat")) {
-   "powershell -Command Start-Process '$jreFolder\bin\javaw.exe' '-jar $env:USERPROFILE\.proxy\proxy.jar' -WindowStyle Hidden" | Out-File -Encoding oem -FilePath "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\proxy.bat"
+"powershell -Command Start-Process '$jreFolder\bin\javaw.exe' '-jar $env:USERPROFILE\.proxy\proxy.jar' -WindowStyle Hidden" | Out-File -Encoding oem -FilePath "$proxyFolder\proxy.bat"
 
-}    
-echo  "autostart OK"
+"""C:\Users\b028178\.proxy\jre21\bin\java.exe"" -jar ""C:\Users\b028178\.proxy\proxy.jar"" `r`npause" | Out-File -Encoding oem -FilePath "$proxyFolder\proxy_debug.bat"
+
+"powershell -Command Start-Process '$proxyFolder\proxy.bat' -WindowStyle Hidden" | Out-File -Encoding oem -FilePath "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\proxy.bat"
+
+echo  "start scripts OK"
+echo "to start the proxy run the following command:"
+echo "Start-Process '$env:USERPROFILE\.proxy\proxy.bat' -WindowStyle Hidden"
 
 ```
 You can look up the current proxy version @ https://jitpack.io/com/github/baloise/proxy/proxy/-SNAPSHOT/maven-metadata.xml
 
 ### Run
 ```
-Start-Process "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\proxy.bat" -WindowStyle Hidden
-```
-
-### Debug
-```
-Start-Process "$env:USERPROFILE\.proxy\jre21\bin\java.exe" "-jar $env:USERPROFILE\.proxy\proxy.jar"
+Start-Process "$env:USERPROFILE\.proxy\proxy.bat" -WindowStyle Hidden
 ```
