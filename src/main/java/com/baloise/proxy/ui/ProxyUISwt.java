@@ -6,7 +6,9 @@ import static java.util.EnumSet.allOf;
 import java.awt.TrayIcon.MessageType;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.util.HashMap;
+import java.util.AbstractMap;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -29,20 +31,23 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.ToolTip;
 import org.eclipse.swt.widgets.Tray;
 import org.eclipse.swt.widgets.TrayItem;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ProxyUISwt implements ProxyUI, Runnable {
 
 	
 	private Shell shell;
 	private TrayItem item;
-	private transient Map<String, ActionListener> actions = new HashMap<>();
+	private transient List<Map.Entry<String, ActionListener>> actions = new ArrayList<>();
 	private boolean showing;
 	private  ImageRegistry images;
 	private Display display;
+	private static final Logger log = LoggerFactory.getLogger(ProxyUISwt.class);
 	
 	@Override
 	public ProxyUI withMenuEntry(String label, ActionListener actionListener) {
-		actions.put(label, actionListener);
+		actions.add(new AbstractMap.SimpleEntry<>(label, actionListener));
 		return this;
 	}
 
@@ -56,9 +61,7 @@ public class ProxyUISwt implements ProxyUI, Runnable {
 			log.debug("waiting for shell creation...");
 			try {
 				Thread.sleep(79);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
+			} catch (InterruptedException expected) {}
 		}
 	}
 
@@ -78,7 +81,9 @@ public class ProxyUISwt implements ProxyUI, Runnable {
 		} else {
 			item = new TrayItem(tray, SWT.COLOR_TRANSPARENT);
 			Menu menu = new Menu(shell, SWT.POP_UP);
-			actions.forEach((label, actionListener) -> {
+			actions.forEach(e -> {
+				String label = e.getKey();
+				ActionListener actionListener = e.getValue();
 				MenuItem mi = new MenuItem(menu, SWT.PUSH);
 				mi.setText(label);
 				mi.setImage(getImage(IMAGE.valueOf(label.toUpperCase())));
