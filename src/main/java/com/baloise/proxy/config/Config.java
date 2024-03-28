@@ -19,9 +19,18 @@ import java.util.Properties;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class Config {
 	
-	public static enum UIType {	SWT, AWT;}
+	public static enum UIType {	SWT, AWT;
+		public static UIType parse(String uiType) {
+			return uiType != null && uiType.toLowerCase().contains("awt") ? AWT : SWT;
+		}
+	}
+	
+	private static final Logger log = LoggerFactory.getLogger(Config.class);
 	
 	private static final String TEST_URL = "testURL";
 	private static final String SIMPLE_PROXY_CHAIN_NOPROXY_HOSTS_REG_EX = "SimpleProxyChain.noproxyHostsRegEx";
@@ -58,7 +67,7 @@ public class Config {
 				defaultProperties.store(out, null);
 				openPropertiesForEditing();
 			} catch (IOException e) {
-				e.printStackTrace();
+				log.debug(e.getMessage(), e);
 			}
 		}
 	}
@@ -88,7 +97,7 @@ public class Config {
 			try {
 				Desktop.getDesktop().open(file.getParentFile());
 			} catch (IOException e1) {
-				e1.printStackTrace();
+				log.debug(e1.getMessage(), e1);
 			}
 		}
 	}
@@ -98,7 +107,7 @@ public class Config {
 		try (InputStream in = new FileInputStream(PROXY_PROPERTIES.toFile())) {
 			lazy_loadedProperties.load(in);
 		} catch (IOException e) {
-			e.printStackTrace();
+			log.debug("Could not load properties", e);
 		}
 		return this;
 	}
@@ -117,7 +126,7 @@ public class Config {
 		try (FileOutputStream out = new FileOutputStream(PROXY_PROPERTIES.toFile())) {
 			loadedProperties().store(out, null);
 		} catch (IOException e) {
-			e.printStackTrace();
+			log.debug("could not store properties", e);
 		}
 	}
 
@@ -173,7 +182,7 @@ public class Config {
 	}
 	
 	public UIType getUI() {
-		return UIType.valueOf(getProperty(UI));
+		return UIType.parse(getProperty(UI));
 	}
 
 }

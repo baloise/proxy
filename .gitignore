@@ -7,3 +7,5 @@
 
 /log.txt
 /bin/
+
+/src/main/resources/com/baloise/proxy/git.properties

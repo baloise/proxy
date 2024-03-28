@@ -24,7 +24,7 @@ public interface ProxyUI {
 	}
 
 	public static enum IMAGE {
-		EXIT, FAILURE, PASSWORD, PROXY_ICON, RESTART, SETTINGS, SUCCESS, TEST;
+		ABOUT, EXIT, FAILURE, PASSWORD, PROXY_ICON, RESTART, SETTINGS, SUCCESS, TEST;
 
 		public URL url() {
 			return ProxyUI.class.getResource(toString().toLowerCase() + ".png");
