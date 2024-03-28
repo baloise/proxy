@@ -64,6 +64,9 @@ public class Proxy {
 		.withMenuEntry("Test", e -> {
 			test();
 		})
+		.withMenuEntry("About", e -> {
+			Version.openAbout();
+		})
 		.withMenuEntry("Restart", e -> {
 			restart();
 		})
@@ -142,8 +145,8 @@ public class Proxy {
 				simpleProxyChain.stop();
 			}));
 		} catch (Exception e) {
-			e.printStackTrace();
-			ui.displayMessage("Start up failure", e.getCause().getMessage() +"\nExiting.", MessageType.ERROR);
+			log.error(e.getMessage(), e);
+			ui.showHTLM(false, "Start up failure", "<b>"+e.getCause().getMessage() +"</b><br/>Exiting.");
 			try {
 				Thread.sleep(5000);
 			} catch (InterruptedException e1) {
@@ -198,7 +201,7 @@ public class Proxy {
 					restart(ARG_TEST);
 				}
 			} catch (IOException | KeyManagementException | NoSuchAlgorithmException | CertificateEncodingException | InterruptedException e1) {
-				e1.printStackTrace();
+				log.error(e1.getMessage(), e1);
 			}
 			return false;
 		} catch (IOException e) {
