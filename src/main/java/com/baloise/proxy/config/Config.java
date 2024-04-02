@@ -45,8 +45,9 @@ public class Config {
 	public final Path PROXY_HOME = Paths.get(System.getProperty("user.home"), ".proxy");
 	public final Path PROXY_PROPERTIES = PROXY_HOME.resolve("proxy.properties");
 
-	Properties defaultProperties = new Properties();
+	private final Properties defaultProperties = new Properties();
 	private Properties lazy_loadedProperties;
+	
 	public Config() {
 		defaultProperties.setProperty(TEST_URL, "https://example.com/");
 		defaultProperties.setProperty(SIMPLE_PROXY_CHAIN_NOPROXY_HOSTS_REG_EX, "--!!!--");
@@ -90,22 +91,38 @@ public class Config {
 	}
 
 	public void openPropertiesForEditing() {
-		File file = PROXY_PROPERTIES.toFile();
-		try {
-			Desktop.getDesktop().open(file);
-		} catch (IOException e) {
+		open(PROXY_PROPERTIES);
+	}
+
+	public void openHome() {
+		open(PROXY_HOME);
+	}
+
+	private void open(Path path) {
+		open(path.toFile(), 1);
+	}
+	
+	private void open(File path, int parents) {
+		IOException ex = null;
+		while (parents-- > 0) {
 			try {
-				Desktop.getDesktop().open(file.getParentFile());
-			} catch (IOException e1) {
-				log.debug(e1.getMessage(), e1);
+				Desktop.getDesktop().open(path);
+			} catch (IOException e) {
+				ex = e;
+				path = path.getParentFile();
 			}
 		}
+		if(ex != null) {
+			log.warn(ex.getMessage(), ex);
+		}
 	}
+	
 	
 	public Config reload() {
 		lazy_loadedProperties = new Properties();
 		try (InputStream in = new FileInputStream(PROXY_PROPERTIES.toFile())) {
 			lazy_loadedProperties.load(in);
+			lazy_loadedProperties.setProperty(UI, getUI().toString());
 		} catch (IOException e) {
 			log.debug("Could not load properties", e);
 		}
@@ -183,6 +200,23 @@ public class Config {
 	
 	public UIType getUI() {
 		return UIType.parse(getProperty(UI));
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(loadedProperties());
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		Config other = (Config) obj;
+		return Objects.equals(loadedProperties(), other.loadedProperties());
 	}
 
 }
