@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
@@ -40,14 +41,14 @@ import com.baloise.proxy.ui.ProxyUISwt;
 import common.OperatingSystem;
 import common.Password;
 
-public class Proxy {
+public class Proxy implements HTTPClient {
 	
 	private static final String ARG_TEST = "test";
 	private ProxyUI ui;
 	private SimpleProxyChain simpleProxyChain;
 	private Config config;
 	Logger log = LoggerFactory.getLogger(Proxy.class);
-
+	final Update update;
 
 	public Proxy() {
 		config = new Config();
@@ -92,6 +93,7 @@ public class Proxy {
 				log.debug("Config did not change. Ignoring file change.");
 			}
 		});
+		update = new Update(this, config.PROXY_HOME, ui);
 	}
 
 	private void restart(String ... args) {
@@ -132,6 +134,9 @@ public class Proxy {
 		}
 		boolean restarting = simpleProxyChain != null;
 		ui.show();				
+		update.checkForUpdatesFrequencyInDays = config.checkForUpdatesFrequencyInDays();
+		update.updateMode = config.getUpdateMode();
+		update.startLatestVersionIfPresent();
 		String startRestart = restarting ? "restarting ..." : "starting ...";
 		log.info("proxy "+startRestart);
 		ui.displayMessage("Proxy", startRestart);		
@@ -160,6 +165,9 @@ public class Proxy {
 		if(argList.contains(ARG_TEST)) {
 			test();
 		}
+		if(!update.isAlive()) {			
+			update.start();
+		}
 		log.info("proxy started");
 	}
 	
@@ -170,12 +178,18 @@ public class Proxy {
 		new Proxy().start(args);
 	}
 
+	
+	@Override
+	public HttpURLConnection openConnection(String url) throws MalformedURLException, IOException {
+		return (HttpURLConnection) new URL(url).openConnection(new java.net.Proxy(java.net.Proxy.Type.HTTP, createSocketAddress()));
+	}
+	
 	public boolean test() {
 		String url = config.getTestURL();
-		InetSocketAddress sa = new InetSocketAddress("127.0.0.1", simpleProxyChain.LOCAL_PORTS[0]);
+		InetSocketAddress sa = createSocketAddress();
 		log.info("testing "+sa);
-		java.net.Proxy proxy = new java.net.Proxy(java.net.Proxy.Type.HTTP, sa);
 		try {
+			java.net.Proxy proxy = new java.net.Proxy(java.net.Proxy.Type.HTTP, sa);
 			HttpURLConnection con = (HttpURLConnection) new URL(url).openConnection(proxy);
 			final boolean success = con.getResponseCode() < 300;
 			try (Scanner scan = new Scanner(con.getInputStream())) {
@@ -213,6 +227,12 @@ public class Proxy {
 			ui.displayMessage("Test on '"+url+"' failed", e.getMessage(), MessageType.ERROR);
 			return false;
 		}
+	}
+
+	private InetSocketAddress createSocketAddress() {
+		InetSocketAddress sa;
+		sa = new InetSocketAddress("127.0.0.1", simpleProxyChain.LOCAL_PORTS[0]);
+		return sa;
 	}
 
 	private void checkProxyEnv() {
@@ -337,6 +357,5 @@ public class Proxy {
 				.sorted((e1,e2)-> e1.getKey().compareTo(e2.getKey()))
 				.map(e-> String.format("-D%s=%s", e.getKey(), e.getValue())).collect(Collectors.joining(" "));
 	}
-	
-	
+
 }
