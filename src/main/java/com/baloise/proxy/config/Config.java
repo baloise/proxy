@@ -30,6 +30,16 @@ public class Config {
 		}
 	}
 	
+	public static enum UpdateMode {	NONE, PROMPT, SILENT;
+		public static UpdateMode parse(String mode) {
+			try{
+				return UpdateMode.valueOf(mode.trim().toUpperCase());
+			} catch (Exception e) {
+				return PROMPT;
+			}
+		}
+	}
+	
 	private static final Logger log = LoggerFactory.getLogger(Config.class);
 	
 	private static final String TEST_URL = "testURL";
@@ -41,6 +51,8 @@ public class Config {
 	private static final String SIMPLE_PROXY_CHAIN_USE_AUTH = "SimpleProxyChain.useAuth";
 	private static final String UI = "UI";
 	private static final String CHECK_ENVIRONMENT = "checkEnvironment";
+	private static final String CHECK_FOR_UPDATES_FREQUANCY_IN_DAYS = "update.check.freuqency.days";
+	private static final String UPDATE_MODE = "update.mode";
 	
 	public final Path PROXY_HOME = Paths.get(System.getProperty("user.home"), ".proxy");
 	public final Path PROXY_PROPERTIES = PROXY_HOME.resolve("proxy.properties");
@@ -60,7 +72,9 @@ public class Config {
 		defaultProperties.setProperty(SIMPLE_PROXY_CHAIN_UPSTREAM_PORT, proxyEnv[1]);
 		defaultProperties.setProperty(SIMPLE_PROXY_CHAIN_USE_AUTH, "false");
 		defaultProperties.setProperty(UI, "SWT");
+		defaultProperties.setProperty(UPDATE_MODE, "PROMPT");
 		defaultProperties.setProperty(CHECK_ENVIRONMENT, "true");
+		defaultProperties.setProperty(CHECK_FOR_UPDATES_FREQUANCY_IN_DAYS, "1");
 		
 		PROXY_HOME.toFile().mkdirs();
 		if (!PROXY_PROPERTIES.toFile().exists()) {
@@ -123,6 +137,7 @@ public class Config {
 		try (InputStream in = new FileInputStream(PROXY_PROPERTIES.toFile())) {
 			lazy_loadedProperties.load(in);
 			lazy_loadedProperties.setProperty(UI, getUI().toString());
+			lazy_loadedProperties.setProperty(UPDATE_MODE, getUpdateMode().toString());
 		} catch (IOException e) {
 			log.debug("Could not load properties", e);
 		}
@@ -172,6 +187,10 @@ public class Config {
 	public int getUpstreamPort() {
 		return parseInt(getProperty(SIMPLE_PROXY_CHAIN_UPSTREAM_PORT));
 	}
+	
+	public int checkForUpdatesFrequencyInDays() {
+		return parseInt(getProperty(CHECK_FOR_UPDATES_FREQUANCY_IN_DAYS));
+	}
 
 	public Config setUpstreamPort(int port) {
 		setProperty(SIMPLE_PROXY_CHAIN_UPSTREAM_PORT, String.valueOf(port));
@@ -200,6 +219,10 @@ public class Config {
 	
 	public UIType getUI() {
 		return UIType.parse(getProperty(UI));
+	}
+	
+	public UpdateMode getUpdateMode() {
+		return UpdateMode.parse(getProperty(UPDATE_MODE));
 	}
 
 	@Override
