@@ -30,7 +30,7 @@ public class Config {
 		}
 	}
 	
-	public static enum UpdateMode {	NONE, PROMPT, SILENT;
+	public static enum UpdateMode {	NONE, PROMPT, IMMEDIATE, ONSTART;
 		public static UpdateMode parse(String mode) {
 			try{
 				return UpdateMode.valueOf(mode.trim().toUpperCase());
