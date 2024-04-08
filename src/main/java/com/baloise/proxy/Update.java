@@ -103,7 +103,7 @@ public class Update extends Thread {
 	}
 
 	private void applyLatestVersion() {
-		if(UpdateMode.SILENT.equals(updateMode) || ui.prompt("Apply update?", "A new version of the proxy will be installed on the next restart.\n Do you want to restart now?")) {
+		if(UpdateMode.IMMEDIATE.equals(updateMode) || ui.prompt("Apply update?", "A new version of the proxy will be installed on the next restart.\n Do you want to restart now?")) {
 			startLatestVersionIfPresent();
 		}
 	}
