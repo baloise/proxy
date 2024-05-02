@@ -51,7 +51,7 @@ public class Config {
 	private static final String SIMPLE_PROXY_CHAIN_USE_AUTH = "SimpleProxyChain.useAuth";
 	private static final String UI = "UI";
 	private static final String CHECK_ENVIRONMENT = "checkEnvironment";
-	private static final String CHECK_FOR_UPDATES_FREQUANCY_IN_DAYS = "update.check.freuqency.days";
+	private static final String CHECK_FOR_UPDATES_FREQUENCY_IN_DAYS = "update.check.frequency.days";
 	private static final String UPDATE_MODE = "update.mode";
 	
 	public final Path PROXY_HOME = Paths.get(System.getProperty("user.home"), ".proxy");
@@ -74,7 +74,7 @@ public class Config {
 		defaultProperties.setProperty(UI, "SWT");
 		defaultProperties.setProperty(UPDATE_MODE, "PROMPT");
 		defaultProperties.setProperty(CHECK_ENVIRONMENT, "true");
-		defaultProperties.setProperty(CHECK_FOR_UPDATES_FREQUANCY_IN_DAYS, "1");
+		defaultProperties.setProperty(CHECK_FOR_UPDATES_FREQUENCY_IN_DAYS, "1");
 		
 		PROXY_HOME.toFile().mkdirs();
 		if (!PROXY_PROPERTIES.toFile().exists()) {
@@ -189,7 +189,7 @@ public class Config {
 	}
 	
 	public int checkForUpdatesFrequencyInDays() {
-		return parseInt(getProperty(CHECK_FOR_UPDATES_FREQUANCY_IN_DAYS));
+		return parseInt(getProperty(CHECK_FOR_UPDATES_FREQUENCY_IN_DAYS));
 	}
 
 	public Config setUpstreamPort(int port) {
