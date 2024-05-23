@@ -30,7 +30,7 @@ echo  "proxy OK"
 
 "powershell -Command Start-Process '$jreFolder\bin\javaw.exe' '-jar $env:USERPROFILE\.proxy\proxy.jar' -WindowStyle Hidden" | Out-File -Encoding oem -FilePath "$proxyFolder\proxy.bat"
 
-"""C:\Users\b028178\.proxy\jre21\bin\java.exe"" -jar ""C:\Users\b028178\.proxy\proxy.jar"" `r`npause" | Out-File -Encoding oem -FilePath "$proxyFolder\proxy_debug.bat"
+"""$env:USERPROFILE\.proxy\jre21\bin\java.exe"" -jar ""$env:USERPROFILE\.proxy\proxy.jar"" `r`npause" | Out-File -Encoding oem -FilePath "$proxyFolder\proxy_debug.bat"
 
 "powershell -Command Start-Process '$proxyFolder\proxy.bat' -WindowStyle Hidden" | Out-File -Encoding oem -FilePath "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\proxy.bat"
 

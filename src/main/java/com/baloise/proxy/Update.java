@@ -70,7 +70,7 @@ public class Update extends Thread {
 	public void run() {
 		sleepy(3333);
 		while(true) {			
-			long aDayInMilliseconds = 24l *60l*60l*1000l;
+			long aDayInMilliseconds = plusMinusTenPercent(24l *60l*60l*1000l);
 			if(!UpdateMode.NONE.equals(updateMode) && 
 					(currentTimeMillis() - getLastCheckedTimeStamp() > checkForUpdatesFrequencyInDays * aDayInMilliseconds)) {
 				setLastCheckedTimeStamp();
@@ -89,6 +89,10 @@ public class Update extends Thread {
 		}
 	}
 
+	private static long plusMinusTenPercent(long input) {
+		return (long) (input*0.9 + Math.random()* 0.2*input);
+	}
+	
 	private void setLastCheckedTimeStamp() {
 		if(!lastUpdateCheck.setLastModified(currentTimeMillis())) {
 			if(lastUpdateCheck.exists() && !lastUpdateCheck.delete()) {

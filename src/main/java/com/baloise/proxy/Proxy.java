@@ -191,11 +191,13 @@ public class Proxy implements HTTPClient {
 		try {
 			java.net.Proxy proxy = new java.net.Proxy(java.net.Proxy.Type.HTTP, sa);
 			HttpURLConnection con = (HttpURLConnection) new URL(url).openConnection(proxy);
-			final boolean success = con.getResponseCode() < 300;
+			con.setConnectTimeout(7000); 
+			final int responseCode = con.getResponseCode();
+			final boolean success = responseCode < 300;
 			try (Scanner scan = new Scanner(con.getInputStream())) {
 				String text = scan.useDelimiter("\\A").next();
 				log.debug(text);
-				ui.showHTLM(success, url+" - "+con.getResponseCode(), text);
+				ui.showHTLM(success, url+" - "+responseCode, text);
 			}
 			return success;
 		} catch (SSLHandshakeException e) {
