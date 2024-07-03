@@ -24,9 +24,11 @@ import org.slf4j.LoggerFactory;
 
 public class Config {
 	
-	public static enum UIType {	SWT, AWT;
+	public static enum UIType {	SWT, AWT, CONSOLE;
 		public static UIType parse(String uiType) {
-			return uiType != null && uiType.toLowerCase().contains("awt") ? AWT : SWT;
+			if(uiType != null && uiType.toLowerCase().contains("awt")) return AWT;
+			if(uiType != null && uiType.toLowerCase().contains("console")) return CONSOLE;
+			return SWT;
 		}
 	}
 	

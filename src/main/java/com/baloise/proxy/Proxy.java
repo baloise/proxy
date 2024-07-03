@@ -34,8 +34,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.baloise.proxy.config.Config;
+import com.baloise.proxy.config.Config.UIType;
 import com.baloise.proxy.ui.ProxyUI;
 import com.baloise.proxy.ui.ProxyUIAwt;
+import com.baloise.proxy.ui.ProxyUIConsole;
 import com.baloise.proxy.ui.ProxyUISwt;
 
 import common.OperatingSystem;
@@ -120,6 +122,7 @@ public class Proxy implements HTTPClient {
 	ProxyUI createUI() {
 		switch (config.getUI()) {
 			case AWT: return new ProxyUIAwt();
+			case CONSOLE: return new ProxyUIConsole();
 			default: return new ProxyUISwt();
 		}
 	} 
@@ -139,8 +142,10 @@ public class Proxy implements HTTPClient {
 		update.startLatestVersionIfPresent();
 		String startRestart = restarting ? "restarting ..." : "starting ...";
 		log.info("proxy "+startRestart);
-		ui.displayMessage("Proxy", startRestart);		
-		checkProxyEnv();
+		ui.displayMessage("Proxy", startRestart);
+		if(config.getUI()!= UIType.CONSOLE) {
+			checkProxyEnv();
+		}
 		if(restarting) simpleProxyChain.stop();
 		simpleProxyChain = new SimpleProxyChain(config);
 		log.info("Proxy starting");
@@ -259,7 +264,7 @@ public class Proxy implements HTTPClient {
 			if(dirtyProps || dirtyEnv) {
 				String message = "";
 				if(dirtyProps) {
-					message += "Your JVM propoerties do not contain proxy settings.\n";
+					message += "Your JVM properties do not contain proxy settings.\n";
 				}
 				if(dirtyEnv) {
 					message += "Your system environment does not contain proxy settings.\n";
