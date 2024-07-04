@@ -51,7 +51,7 @@ public class Password {
 		return hasChild(baloise, "windows") ? baloise.node("windows") : baloise.node("proxy").node(PASSWORD);
 	}
 
-	private static void set(String pwd) {
+	public static void set(String pwd) {
 		node().put(PASSWORD, Crypto.userEncrypt(pwd));
 	}
 
@@ -77,5 +77,5 @@ public class Password {
 			}
 		}
 	}
-
+	
 }

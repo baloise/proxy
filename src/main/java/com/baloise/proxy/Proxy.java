@@ -45,7 +45,8 @@ import common.Password;
 
 public class Proxy implements HTTPClient {
 	
-	private static final String ARG_TEST = "test";
+	private static final String ARG_TEST = "-test";
+	private static final String ARG_PWD = "-password=";
 	private ProxyUI ui;
 	private SimpleProxyChain simpleProxyChain;
 	private Config config;
@@ -129,6 +130,12 @@ public class Proxy implements HTTPClient {
 	
 	public void start(String ... args) {
 		final List<String> argList = asList(args);
+		argList.stream().filter(a->a.startsWith(ARG_PWD)).findAny().ifPresent(a->{
+			Password.set(a.replaceFirst(ARG_PWD, ""));
+			log.info("password set");
+			log.info("exiting");
+			System.exit(0);
+		});
 		config.reload();
 		try {
 			if(config.useAuth()) Password.get();			
