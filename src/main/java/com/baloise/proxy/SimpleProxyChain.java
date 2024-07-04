@@ -1,10 +1,11 @@
 package com.baloise.proxy;
 
+import static java.util.stream.Collectors.toList;
+
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Queue;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.littleshoot.proxy.ChainedProxy;
@@ -118,14 +119,16 @@ public class SimpleProxyChain {
 		}
 		localProxies = IntStream.of(LOCAL_PORTS).mapToObj(
 				localPort -> 
-				DefaultHttpProxyServer.bootstrap().withPort(localPort).withChainProxyManager(chainedProxyManager)
-				.withFiltersSource(filters)
-				.start()).collect(Collectors.toList());
+				DefaultHttpProxyServer.bootstrap()
+					.withPort(localPort)
+					.withChainProxyManager(chainedProxyManager)
+					.withFiltersSource(filters)
+				.start()).collect(toList());
 	}
 	
 	public  void stop() {
-		internalProxy.stop();
 		localProxies.forEach(HttpProxyServer::stop);
+		internalProxy.stop();
 	}
 
 	@Override
