@@ -1,5 +1,7 @@
 package com.baloise.proxy.ui;
 
+import static java.lang.Integer.parseInt;
+
 import java.awt.TrayIcon.MessageType;
 import java.awt.event.ActionListener;
 import java.net.URL;
@@ -14,6 +16,13 @@ public interface ProxyUI {
 	public static enum PasswordDialogResult {
 		SET, REMOVE, CANCEL;
 
+		static PasswordDialogResult ofValue(String option) {
+			try {
+				return ofValue(parseInt(option)-1);
+			} catch (Exception e) {
+				return CANCEL;
+			}
+		}
 		static PasswordDialogResult ofValue(int option) {
 			switch (option) {
 				case 0: 	return SET;
