@@ -20,6 +20,7 @@ public final class Version {
 	private Version() {}
 
 	public static void openAbout() {
+		log.info("Running proxy version "+gitCommitHash());
 		String uri = format("https://github.com/baloise/proxy/blob/%s/README.md", gitCommitHash());
 		try {
 			Desktop.getDesktop().browse(new URI(uri));
