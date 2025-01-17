@@ -35,6 +35,7 @@ public class SimpleProxyChain {
 	private HttpProxyServer internalProxy;
 	private List<HttpProxyServer> localProxies;
 	Logger log = LoggerFactory.getLogger(SimpleProxyChain.class);
+	private final boolean ALLOW_LOCAL_ONLY;
 
 
 	public SimpleProxyChain(Config config) {
@@ -44,15 +45,17 @@ public class SimpleProxyChain {
 				config.getPort(),
 				config.getInternalPort(),
 				config.getNoproxyHostsRegEx(),
-				config.useAuth()
+				config.useAuth(),
+				config.allowLocalOnly()
 			);
 	}
 	
-	public SimpleProxyChain(String upstreamServer, int upstreamPort, int[] port, int internalPort, String noproxyHostsRegEx, boolean useAuth) {
+	public SimpleProxyChain(String upstreamServer, int upstreamPort, int[] port, int internalPort, String noproxyHostsRegEx, boolean useAuth, boolean allowLocalOnly) {
 		this.UPSTREAM_PORT = upstreamPort;
 		this.UPSTREAM_SERVER = upstreamServer;
 		this.INTERNAL_PORT = internalPort;
 		this.LOCAL_PORTS = port;
+		this.ALLOW_LOCAL_ONLY = allowLocalOnly;
 		this.NO_PROXY_HOSTS_REGEX = Pattern.compile(noproxyHostsRegEx);
 		
 		log.info(this.toString());
@@ -121,9 +124,11 @@ public class SimpleProxyChain {
 				localPort -> 
 				DefaultHttpProxyServer.bootstrap()
 					.withPort(localPort)
+					.withAllowLocalOnly(ALLOW_LOCAL_ONLY)
 					.withChainProxyManager(chainedProxyManager)
 					.withFiltersSource(filters)
 				.start()).collect(toList());
+		System.out.println(localProxies.getFirst().getListenAddress());
 	}
 	
 	public  void stop() {
