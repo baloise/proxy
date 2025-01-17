@@ -72,7 +72,7 @@ public class PasswordDialogSwt extends Dialog {
 
 	@Override
 	protected Point getInitialSize() {
-		return new Point(450, 150);
+		return new Point(600, 300);
 	}
 
 }
