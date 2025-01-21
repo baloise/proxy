@@ -128,7 +128,6 @@ public class SimpleProxyChain {
 					.withChainProxyManager(chainedProxyManager)
 					.withFiltersSource(filters)
 				.start()).collect(toList());
-		System.out.println(localProxies.getFirst().getListenAddress());
 	}
 	
 	public  void stop() {
