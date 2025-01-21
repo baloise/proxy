@@ -55,6 +55,7 @@ public class Config {
 	private static final String CHECK_ENVIRONMENT = "checkEnvironment";
 	private static final String CHECK_FOR_UPDATES_FREQUENCY_IN_DAYS = "update.check.frequency.days";
 	private static final String UPDATE_MODE = "update.mode";
+	private static final String ALLOW_LOCAL_ONLY = "allowLocalOnly";
 	
 	public final Path PROXY_HOME = Paths.get(System.getProperty("user.home"), ".proxy");
 	public final Path PROXY_PROPERTIES = PROXY_HOME.resolve("proxy.properties");
@@ -77,6 +78,7 @@ public class Config {
 		defaultProperties.setProperty(UPDATE_MODE, "PROMPT");
 		defaultProperties.setProperty(CHECK_ENVIRONMENT, "true");
 		defaultProperties.setProperty(CHECK_FOR_UPDATES_FREQUENCY_IN_DAYS, "1");
+		defaultProperties.setProperty(ALLOW_LOCAL_ONLY, "true");
 		
 		PROXY_HOME.toFile().mkdirs();
 		if (!PROXY_PROPERTIES.toFile().exists()) {
@@ -177,6 +179,16 @@ public class Config {
 		return this;
 	}
 
+	public boolean allowLocalOnly() {
+		return parseBoolean(getProperty(ALLOW_LOCAL_ONLY));
+	}
+
+	public Config setAllowLocalOnly(boolean allow) {
+		setProperty(ALLOW_LOCAL_ONLY, String.valueOf(allow));
+		return this;
+	}
+
+	
 	public String getUpstreamServer() {
 		return getProperty(SIMPLE_PROXY_CHAIN_UPSTREAM_SERVER);
 	}

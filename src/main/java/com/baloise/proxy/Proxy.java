@@ -245,7 +245,7 @@ public class Proxy implements HTTPClient {
 
 	private InetSocketAddress createSocketAddress() {
 		InetSocketAddress sa;
-		sa = new InetSocketAddress("0.0.0.0", simpleProxyChain.LOCAL_PORTS[0]);
+		sa = new InetSocketAddress("127.0.0.1", simpleProxyChain.LOCAL_PORTS[0]);
 		return sa;
 	}
 
