@@ -13,6 +13,7 @@ import org.littleshoot.proxy.ChainedProxyAdapter;
 import org.littleshoot.proxy.ChainedProxyManager;
 import org.littleshoot.proxy.HttpFiltersSource;
 import org.littleshoot.proxy.HttpProxyServer;
+import org.littleshoot.proxy.impl.ClientDetails;
 import org.littleshoot.proxy.impl.DefaultHttpProxyServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -85,9 +86,9 @@ public class SimpleProxyChain {
 			}
 		};
 		chainedProxyManager = new ChainedProxyManager() {
-			
+
 			@Override
-			public void lookupChainedProxies(HttpRequest httpRequest, Queue<ChainedProxy> chainedProxies) {
+			public void lookupChainedProxies(HttpRequest httpRequest, Queue<ChainedProxy> chainedProxies, ClientDetails clientDetails) {
 				if (noProxy(getHost(httpRequest))) {
 					if(log.isDebugEnabled())
 						log.debug("calling "+ httpRequest.getUri() + " without proxy");
