@@ -46,7 +46,7 @@
 		</dependency>
 	</dependencies>
 	<build>
-		<finalName>${project.artifactId}-${project.activeProfiles[0].id}</finalName>
+		<finalName>${project.artifactId}-${project.activeProfiles[0].id}-${project.version}</finalName>
 		<plugins>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -104,6 +104,30 @@
 					<commitIdGenerationMode>full</commitIdGenerationMode>
 				</configuration>
 			</plugin>
+        <plugin>
+            <artifactId>maven-resources-plugin</artifactId>
+            <version>3.2.0</version>
+            <executions>
+                <execution>
+                    <id>copy-final-jar</id>
+                    <phase>package</phase>
+                    <goals>
+                        <goal>copy-resources</goal>
+                    </goals>
+                    <configuration>
+                        <outputDirectory>${project.build.directory}/dist</outputDirectory>
+                        <resources>
+                            <resource>
+                                <directory>${project.build.directory}</directory>
+                                <includes>
+                                    <include>${project.build.finalName}.jar</include>
+                                </includes>
+                            </resource>
+                        </resources>
+                    </configuration>
+                </execution>
+            </executions>
+        </plugin>
 		</plugins>
 	</build>
 	<profiles>
