@@ -150,9 +150,10 @@ public class ProxyUISwt implements ProxyUI, Runnable {
 			browser.addTitleListener((TitleEvent event) -> {
 				shell.setText(title+ " | "+event.title);
 			});
-			browser.setBounds(0,0,600,400);
 			browser.setText(html);
 			shell.pack();
+			shell.setBounds(0,0,600,400);
+			shell.setLocation(display.getPrimaryMonitor().getBounds().width/2 - 300, display.getPrimaryMonitor().getBounds().height/2 - 200);
 			shell.open();
 		});
 	}

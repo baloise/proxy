@@ -4,7 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.baloise.proxy</groupId>
 	<artifactId>proxy</artifactId>
-	<version>1.0.3</version>
+	<version>1.0.4</version>
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<maven.compiler.target>21</maven.compiler.target>
@@ -25,12 +25,12 @@
 		<dependency>
 			<groupId>org.eclipse.platform</groupId>
 			<artifactId>${swt.artifactId}</artifactId>
-			<version>3.128.0</version>
+			<version>3.129.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.eclipse.platform</groupId>
 			<artifactId>org.eclipse.jface</artifactId>
-			<version>3.35.100</version>
+			<version>3.36.0</version>
 			<exclusions>
 				<exclusion>
 					<groupId>org.eclipse.platform</groupId>
@@ -46,7 +46,7 @@
 		</dependency>
 	</dependencies>
 	<build>
-		<finalName>${project.artifactId}-${project.activeProfiles[0].id}</finalName>
+		<finalName>${project.artifactId}-${project.activeProfiles[0].id}-${project.version}</finalName>
 		<plugins>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
