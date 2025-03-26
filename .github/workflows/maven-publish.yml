@@ -34,6 +34,6 @@ jobs:
       run: mvn -B package -P ${{ matrix.profile }} --file pom.xml
 
     - name: Publish to GitHub Packages Apache Maven
-      run: mvn deploy -s $GITHUB_WORKSPACE/settings.xml -P ${{ matrix.profile }}
+      run: mvn deploy -DaltDeploymentRepository=github::default::https://maven.pkg.github.com/baloise/proxy -s $GITHUB_WORKSPACE/settings.xml -P ${{ matrix.profile }}
       env:
         GITHUB_TOKEN: ${{ github.token }}
