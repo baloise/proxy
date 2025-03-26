@@ -5,6 +5,9 @@ on:
     branches:
       - '*'
 
+permissions:
+  contents: write
+
 jobs:
   build:
 
@@ -38,4 +41,3 @@ jobs:
       with:
         folder: target/dist
         CLEAN: false
-        token: ${{ secrets.GITHUB_TOKEN }}
