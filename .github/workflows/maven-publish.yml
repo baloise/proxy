@@ -38,3 +38,4 @@ jobs:
       with:
         folder: target/dist
         CLEAN: false
+        token: ${{ secrets.GITHUB_TOKEN }}
