@@ -40,4 +40,5 @@ jobs:
       uses: JamesIves/github-pages-deploy-action@v4
       with:
         folder: target/dist
+        token: ${{ secrets.GITHUB_TOKEN }}
         CLEAN: false
