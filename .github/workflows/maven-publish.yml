@@ -33,9 +33,6 @@ jobs:
     - name: Build with Maven 🔧
       run: mvn --batch-mode package -P ${{ matrix.profile }}
 
-    - name: Write version 🪩
-      run: git rev-parse HEAD > target/dist/latest.txt
-
     - name: Deploy 🚀
       uses: JamesIves/github-pages-deploy-action@v4
       with:
