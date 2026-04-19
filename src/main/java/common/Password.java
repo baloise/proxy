@@ -11,43 +11,45 @@ import org.slf4j.LoggerFactory;
 import com.baloise.proxy.ui.ProxyUI;
 import com.baloise.proxy.ui.ProxyUI.PasswordDialogResult;
 
-public class Password {
+/**
+ * User-scoped credential store backed by {@link Preferences}.
+ * The password is XOR-obfuscated (not cryptographic) and decryptable only by the same OS user.
+ */
+public final class Password {
 
 	private static final String PASSWORD = "password";
-	public static ProxyUI ui;
+	private static final Logger log = LoggerFactory.getLogger(Password.class);
 
-	static Logger log = LoggerFactory.getLogger(Password.class);
+	private static volatile ProxyUI ui;
 
-	public static boolean hasChild(final Preferences node, final String name) {
-		try {
-			String[] childrenNames = node.childrenNames();
-			Arrays.sort(childrenNames);
-			return Arrays.binarySearch(childrenNames, name) > -1;
-		} catch (BackingStoreException e) {
-			return false;
-		}
-	}
+	private Password() {}
 
-	public static void main(String[] args) throws BackingStoreException {
-		showDialog();
+	public static void setUI(ProxyUI ui) {
+		Password.ui = ui;
 	}
 
 	public static boolean showDialog() {
+		if (ui == null) throw new IllegalStateException("UI not initialized");
 		Entry<PasswordDialogResult, String> result = ui.showPasswordDialog();
 		switch (result.getKey()) {
-		default:
-			return false;
-		case REMOVE:
-			remove();
-			return true;
-		case SET:
-			set(result.getValue());
-			return true;
+			case REMOVE:
+				remove();
+				return true;
+			case SET:
+				String value = result.getValue();
+				if (value == null || value.isEmpty()) {
+					log.warn("empty password entered - not storing");
+					return false;
+				}
+				set(value);
+				return true;
+			default:
+				return false;
 		}
 	}
 
 	public static Preferences node() {
-		final Preferences baloise = Preferences.userRoot().node("com").node("baloise");
+		Preferences baloise = Preferences.userRoot().node("com").node("baloise");
 		return hasChild(baloise, "windows") ? baloise.node("windows") : baloise.node("proxy").node(PASSWORD);
 	}
 
@@ -59,23 +61,35 @@ public class Password {
 		node().remove(PASSWORD);
 	}
 
+	/**
+	 * Retrieve the stored password, prompting the user if missing or corrupt.
+	 * Bounded retry loop (up to 3 iterations) to avoid stack-overflow / dialog-spam
+	 * when the user repeatedly cancels or enters garbage.
+	 */
 	public static String get() {
-		String pwd = node().get(PASSWORD, "");
-		if (pwd == null || pwd.trim().isEmpty()) {
-			if (showDialog()) {
-				return get();
-			} else {
-				throw new IllegalStateException("You must set the proxy password.");
+		for (int attempt = 0; attempt < 3; attempt++) {
+			String pwd = node().get(PASSWORD, "");
+			if (pwd == null || pwd.trim().isEmpty()) {
+				if (!showDialog()) break;
+				continue;
 			}
-		} else {
 			try {
 				return Crypto.userDecrypt(pwd);
 			} catch (IllegalStateException e) {
-				log.warn(e.getMessage() + " - resetting password.");
+				log.warn("{} - resetting password.", e.getMessage());
 				remove();
-				return get();
 			}
 		}
+		throw new IllegalStateException("You must set the proxy password.");
 	}
-	
+
+	private static boolean hasChild(Preferences node, String name) {
+		try {
+			String[] children = node.childrenNames();
+			Arrays.sort(children);
+			return Arrays.binarySearch(children, name) > -1;
+		} catch (BackingStoreException e) {
+			return false;
+		}
+	}
 }

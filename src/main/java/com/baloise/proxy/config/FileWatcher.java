@@ -7,63 +7,62 @@ import java.nio.file.StandardWatchEventKinds;
 import java.nio.file.WatchEvent;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Watches a single file for modifications and invokes onChange when it changes.
+ * Debounces rapid successive events (editors often fire two ENTRY_MODIFY events per save).
+ */
 public class FileWatcher extends Thread {
-    private final File file;
-    private AtomicBoolean stop = new AtomicBoolean(false);
-	private Consumer<File> onChange;
-	Logger log = LoggerFactory.getLogger(FileWatcher.class);
-	
-    public FileWatcher(File file, Consumer<File> onChange) {
-        this.file = file;
+
+	private static final long DEBOUNCE_MS = 200L;
+
+	private final File file;
+	private final Consumer<File> onChange;
+	private final Logger log = LoggerFactory.getLogger(FileWatcher.class);
+
+	public FileWatcher(File file, Consumer<File> onChange) {
+		this.file = file;
 		this.onChange = onChange;
+		setName("proxy-config-watcher");
 		setDaemon(true);
-    }
+	}
 
-    public boolean isStopped() { return stop.get(); }
-    public void stopThread() { stop.set(true); }
+	@Override
+	public void run() {
+		Path dir = file.toPath().toAbsolutePath().getParent();
+		try (WatchService watcher = FileSystems.getDefault().newWatchService()) {
+			dir.register(watcher, StandardWatchEventKinds.ENTRY_MODIFY);
+			long lastFired = 0L;
+			while (!Thread.currentThread().isInterrupted()) {
+				WatchKey key = watcher.take();
+				boolean relevant = false;
+				for (WatchEvent<?> event : key.pollEvents()) {
+					if (event.kind() == StandardWatchEventKinds.OVERFLOW) continue;
+					Path changed = (Path) event.context();
+					if (changed != null && file.getName().equals(changed.toString())) {
+						relevant = true;
+					}
+				}
+				if (!key.reset()) break;
 
-    
-
-    @Override
-    public void run() {
-        try (WatchService watcher = FileSystems.getDefault().newWatchService()) {
-            Path path = file.toPath().getParent();
-            path.register(watcher, StandardWatchEventKinds.ENTRY_MODIFY);
-            while (!isStopped()) {
-                WatchKey key;
-                try { key = watcher.poll(25, TimeUnit.MILLISECONDS); }
-                catch (InterruptedException e) { return; }
-                if (key == null) { Thread.yield(); continue; }
-
-                for (WatchEvent<?> event : key.pollEvents()) {
-                    WatchEvent.Kind<?> kind = event.kind();
-
-                    @SuppressWarnings("unchecked")
-                    WatchEvent<Path> ev = (WatchEvent<Path>) event;
-                    Path filename = ev.context();
-
-                    if (kind == StandardWatchEventKinds.OVERFLOW) {
-                        Thread.yield();
-                        continue;
-                    } else if (kind == java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY && ev.count() <=1
-                            && filename.toString().equals(file.getName()) && file.length() > 0) {
-                       	log.info(file + " changed - reloading");
-                    	onChange.accept(file);
-                    }
-                    boolean valid = key.reset();
-                    if (!valid) { break; }
-                }
-                Thread.yield();
-            }
-        } catch (Throwable e) {
-        	log.error(e.getMessage(), e);
-        }
-    }
+				long now = System.currentTimeMillis();
+				if (relevant && file.length() > 0 && now - lastFired > DEBOUNCE_MS) {
+					lastFired = now;
+					try {
+						onChange.accept(file);
+					} catch (RuntimeException ex) {
+						log.error("onChange handler failed", ex);
+					}
+				}
+			}
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+		} catch (Exception e) {
+			log.error("FileWatcher failed", e);
+		}
+	}
 }

@@ -10,22 +10,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
-import java.net.MalformedURLException;
 import java.net.URL;
-import java.security.KeyManagementException;
-import java.security.NoSuchAlgorithmException;
 import java.security.cert.Certificate;
-import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
 import java.util.Scanner;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.LogManager;
-import java.util.stream.Collectors;
 
 import javax.net.ssl.SSLHandshakeException;
 import javax.swing.SwingUtilities;
@@ -34,342 +27,202 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.baloise.proxy.config.Config;
-import com.baloise.proxy.config.Config.UIType;
 import com.baloise.proxy.ui.ProxyUI;
 import com.baloise.proxy.ui.ProxyUIAwt;
-import com.baloise.proxy.ui.ProxyUIConsole;
-import com.baloise.proxy.ui.ProxyUISwt;
 
-import common.OperatingSystem;
 import common.Password;
 
-public class Proxy implements HTTPClient {
-	
+public class Proxy {
+
+	private static final Logger log = LoggerFactory.getLogger(Proxy.class);
 	private static final String ARG_TEST = "-test";
 	private static final String ARG_PWD = "-password=";
-	private ProxyUI ui;
-	private SimpleProxyChain simpleProxyChain;
+
+	private final ProxyUI ui;
 	private Config config;
-	Logger log = LoggerFactory.getLogger(Proxy.class);
-	final Update update;
+	private SimpleProxyChain chain;
+	private final AtomicBoolean shutdownHookRegistered = new AtomicBoolean();
 
 	public Proxy() {
-		config = new Config();
-		ui = createUI()
-		.withMenuEntry("Home", e -> {
-			config.openHome();
-		})
-		.withMenuEntry("Settings", e -> {
-			config.openPropertiesForEditing();
-		})
-		.withMenuEntry("Password", e -> {
-			if(Password.showDialog()) {
-				start();
-			}
-		})
-		.withMenuEntry("Test", e -> {
-			test();
-		})
-		.withMenuEntry("About", e -> {
-			Version.openAbout();
-		})
-		.withMenuEntry("Restart", e -> {
-			restart();
-		})
-		.withMenuEntry("Exit", e -> {
-			log.info("Exiting...");
-			System.exit(0);
-		});
-		Password.ui = ui;
-		config.onPropertyChange(f -> {
-			Config oldConfig = config;
-			config = new Config().reload();
-			if(!config.getUI().equals(oldConfig.getUI())) {
-				// TODO can we recreate the UI without restarting the VM?
-				String msg = "UI changed. Restarting proxy virtual machine.";
-				log.info(msg);
-				ui.displayMessage("Proxy restarting", msg);
-				restart();
-			} else if(!config.equals(oldConfig)) {
-				start();
-			} else {
-				log.debug("Config did not change. Ignoring file change.");
-			}
-		});
-		update = new Update(this, config.PROXY_HOME, ui);
+		this.config = new Config();
+		this.ui = new ProxyUIAwt()
+				.withMenuEntry("Home",     e -> config.openHome())
+				.withMenuEntry("Settings", e -> config.openPropertiesForEditing())
+				.withMenuEntry("Password", e -> { if (Password.showDialog()) start(); })
+				.withMenuEntry("Test",     e -> test())
+				.withMenuEntry("About",    e -> Version.openAbout())
+				.withMenuEntry("Restart",  e -> restart())
+				.withMenuEntry("Exit",     e -> { log.info("exiting"); System.exit(0); });
+		Password.setUI(ui);
+		// Dispatch off the FileWatcher thread: a password dialog or chain-start
+		// must not block further file events.
+		config.onPropertyChange(f -> CompletableFuture.runAsync(this::onConfigChanged));
 	}
 
-	private void restart(String ... args) {
-		log.info("restarting");
-		simpleProxyChain.stop();
+	private synchronized void onConfigChanged() {
+		Config fresh = new Config().reload();
+		if (fresh.equals(config)) {
+			log.debug("config file changed but effective config identical - ignoring");
+			return;
+		}
+		log.info("config changed - restarting proxy chain");
+		config = fresh;
+		start();
+	}
+
+	private void registerShutdownHook() {
+		if (!shutdownHookRegistered.compareAndSet(false, true)) return;
+		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+			try {
+				if (chain != null) chain.stop();
+			} catch (Throwable t) {
+				log.debug("shutdown hook chain.stop failed", t);
+			}
+		}, "proxy-shutdown"));
+	}
+
+	private void restart(String... args) {
+		log.info("restarting JVM");
+		if (chain != null) chain.stop();
 		try {
 			List<String> cmd = new ArrayList<>(asList(
-					tool("java"), 
-					"-cp",
-					System.getProperty("java.class.path"),
-					Proxy.class.getName()
-					));
+					tool("java"),
+					"-cp", System.getProperty("java.class.path"),
+					Proxy.class.getName()));
 			cmd.addAll(asList(args));
-			new ProcessBuilder(cmd)
-				.inheritIO()
-				.start();
+			new ProcessBuilder(cmd).inheritIO().start();
 		} catch (IOException e) {
-			log.error("Could not start proxy", e);
+			log.error("Could not restart proxy", e);
 			System.exit(667);
 		}
 		System.exit(0);
 	}
 
-	ProxyUI createUI() {
-		switch (config.getUI()) {
-			case AWT: return new ProxyUIAwt();
-			case CONSOLE: return new ProxyUIConsole();
-			default: return new ProxyUISwt();
-		}
-	} 
-	
-	public void start(String ... args) {
-		final List<String> argList = asList(args);
-		argList.stream().filter(a->a.startsWith(ARG_PWD)).findAny().ifPresent(a->{
-			Password.set(a.replaceFirst(ARG_PWD, ""));
-			log.info("password set");
-			log.info("exiting");
+	public synchronized void start(String... args) {
+		List<String> argList = asList(args);
+		argList.stream().filter(a -> a.startsWith(ARG_PWD)).findAny().ifPresent(a -> {
+			Password.set(a.substring(ARG_PWD.length()));
+			log.info("password set - exiting");
 			System.exit(0);
 		});
+
 		config.reload();
-		try {
-			if(config.useAuth()) Password.get();			
-		} catch (IllegalStateException e) {
-			Password.showDialog();
-		}
-		boolean restarting = simpleProxyChain != null;
-		ui.show();				
-		update.checkForUpdatesFrequencyInDays = config.checkForUpdatesFrequencyInDays();
-		update.updateMode = config.getUpdateMode();
-		update.startLatestVersionIfPresent();
-		String startRestart = restarting ? "restarting ..." : "starting ...";
-		log.info("proxy "+startRestart);
-		ui.displayMessage("Proxy", startRestart);
-		if(config.getUI()!= UIType.CONSOLE) {
-			checkProxyEnv();
-		}
-		if(restarting) simpleProxyChain.stop();
-		simpleProxyChain = new SimpleProxyChain(config);
-		log.info("Proxy starting");
-		try {
-			simpleProxyChain.start(new FiltersSource407(() -> {
-				log.warn("got 407 - asking for new password");
-				SwingUtilities.invokeLater(()->{
-					Password.showDialog();
-					start();				
-				});
-				simpleProxyChain.stop();
-			}));
-		} catch (Exception e) {
-			log.error(e.getMessage(), e);
-			ui.showHTLM(false, "Start up failure", "<b>"+e.getCause().getMessage() +"</b><br/>Exiting.");
+		if (config.useAuth()) {
 			try {
-				Thread.sleep(5000);
-			} catch (InterruptedException e1) {
+				Password.get();
+			} catch (IllegalStateException e) {
+				Password.showDialog();
 			}
+		}
+
+		boolean restarting = chain != null;
+		ui.show();
+		String msg = restarting ? "restarting" : "starting";
+		log.info("proxy {}", msg);
+		ui.displayMessage("Proxy", msg);
+
+		if (restarting) chain.stop();
+		chain = new SimpleProxyChain(config);
+		registerShutdownHook(); // idempotent
+		try {
+			chain.start(new FiltersSource407(this::onAuthFailure));
+		} catch (Exception e) {
+			log.error("Proxy startup failed", e);
+			ui.showHtml(false, "Start up failure",
+					"<b>" + rootMessage(e) + "</b><br/>Exiting.");
+			sleepQuietly(5000);
 			System.exit(666);
 		}
-		if(argList.contains(ARG_TEST)) {
-			test();
-		}
-		if(!update.isAlive()) {			
-			update.start();
-		}
+
+		if (argList.contains(ARG_TEST)) test();
 		log.info("proxy started");
 	}
-	
-	public static void main(String[] args) throws IOException {
-		try(InputStream logProps = Proxy.class.getResourceAsStream("logging.properties")){
-			LogManager.getLogManager().readConfiguration(logProps);
-		}
-		new Proxy().start(args);
+
+	private void onAuthFailure() {
+		log.warn("got 407 - asking for new password");
+		SwingUtilities.invokeLater(() -> {
+			if (Password.showDialog()) {
+				if (chain != null) chain.invalidateAuthCache();
+				start();
+			}
+		});
 	}
 
-	
-	@Override
-	public HttpURLConnection openConnection(String url) throws MalformedURLException, IOException {
-		return (HttpURLConnection) new URL(url).openConnection(new java.net.Proxy(java.net.Proxy.Type.HTTP, createSocketAddress()));
-	}
-	
 	public boolean test() {
 		String url = config.getTestURL();
-		InetSocketAddress sa = createSocketAddress();
-		log.info("testing "+sa);
+		InetSocketAddress sa = new InetSocketAddress("127.0.0.1", chain.localPorts[0]);
+		log.info("testing {} via {}", url, sa);
 		try {
 			java.net.Proxy proxy = new java.net.Proxy(java.net.Proxy.Type.HTTP, sa);
 			HttpURLConnection con = (HttpURLConnection) new URL(url).openConnection(proxy);
-			con.setConnectTimeout(7000); 
-			final int responseCode = con.getResponseCode();
-			final boolean success = responseCode < 300;
+			con.setConnectTimeout(7000);
+			int code = con.getResponseCode();
+			boolean success = code < 300;
 			try (Scanner scan = new Scanner(con.getInputStream())) {
 				String text = scan.useDelimiter("\\A").next();
-				log.debug(text);
-				ui.showHTLM(success, url+" - "+responseCode, text);
+				ui.showHtml(success, url + " - " + code, text);
 			}
 			return success;
 		} catch (SSLHandshakeException e) {
-			try {
-				URL URL = new URL(url);
-				Certificate cert = ImportTLSCert.getCertificate(URL.getHost(), getPort(URL), sa.getHostString(), sa.getPort());
-				X509Certificate x509Certificate = (X509Certificate) cert;
-				String msg = "Detected unstrusted proxy certificate";
-				log.info(msg);
-				if(ui.prompt(msg, format("Detected unstrusted proxy certificate from:\n %s\n\nDo you want to trust the certificate and restart the proxy?", x509Certificate.getIssuerX500Principal()))) {
-					File certFile = ImportTLSCert.writeToFile(x509Certificate);
-					certFile.deleteOnExit();
-					String keystore = ImportTLSCert.getDefaultKeystore();
-					ImportTLSCert.importCert(
-							keystore,
-							ImportTLSCert.getDefaultPassword(),
-							ImportTLSCert.getDefaultAlias(x509Certificate),
-							certFile.getAbsolutePath()
-							);
-					checkTrustStoreProperty(keystore);
-					restart(ARG_TEST);
-				}
-			} catch (IOException | KeyManagementException | NoSuchAlgorithmException | CertificateEncodingException | InterruptedException e1) {
-				log.error(e1.getMessage(), e1);
-			}
-			return false;
+			return handleUntrustedCert(url, sa, e);
 		} catch (IOException e) {
 			log.warn(e.getMessage(), e);
-			ui.displayMessage("Test on '"+url+"' failed", e.getMessage(), MessageType.ERROR);
+			ui.displayMessage("Test on '" + url + "' failed", e.getMessage(), MessageType.ERROR);
 			return false;
 		}
 	}
 
-	private InetSocketAddress createSocketAddress() {
-		InetSocketAddress sa;
-		sa = new InetSocketAddress("127.0.0.1", simpleProxyChain.LOCAL_PORTS[0]);
-		return sa;
-	}
-
-	private void checkProxyEnv() {
-		if(config.checkEnvironment()) {
-			String proxyHostProp = System.getProperty("https.proxyHost", System.getProperty("http.proxyHost"));
-			String proxyPortProp = System.getProperty("https.proxyPort", System.getProperty("http.proxyPort"));
-			String proxyHostEnv= "null";
-			String proxyPortEnv = "null";
-			final String thisProxyHost = "localhost";
-			int thisProxyPort = config.getPort()[0];
-			boolean dirtyProps = !Objects.equals(thisProxyHost, proxyHostProp) || proxyPortProp == null || !Objects.equals(thisProxyPort, Integer.valueOf(proxyPortProp).intValue());
-			Optional<String> pEnv = Config.detectHTTPProxyEnv();
-			boolean dirtyEnv = true;
-			if(pEnv.isPresent()) {
-				String[] httpProxyEnv = Config.parseHTTPProxyEnv(pEnv.get());
-				proxyHostEnv = httpProxyEnv[0];
-				proxyPortEnv = httpProxyEnv[1];
-				if(thisProxyHost.equals(proxyHostEnv) && Objects.equals(thisProxyPort, Integer.valueOf(proxyPortEnv).intValue())) {
-					dirtyEnv = false;
-				}
+	private boolean handleUntrustedCert(String url, InetSocketAddress sa, SSLHandshakeException cause) {
+		try {
+			URL u = new URL(url);
+			Certificate cert = ImportTLSCert.getCertificate(u.getHost(), portOf(u), sa.getHostString(), sa.getPort());
+			X509Certificate x509 = (X509Certificate) cert;
+			if (!ui.prompt("Detected untrusted proxy certificate",
+					format("Detected untrusted proxy certificate from:\n%s\n\nDo you want to trust the certificate and restart the proxy?",
+							x509.getIssuerX500Principal()))) {
+				return false;
 			}
-			if(dirtyProps || dirtyEnv) {
-				String message = "";
-				if(dirtyProps) {
-					message += "Your JVM properties do not contain proxy settings.\n";
-				}
-				if(dirtyEnv) {
-					message += "Your system environment does not contain proxy settings.\n";
-				}
-				message += "\nDo you want to update you JVM properties / system environment?";
-				if(ui.prompt("Do you want to update you JVM properties / system environment?", message )) {
-					if(dirtyProps) {
-						updateJavaToolsOpts(Map.of("http.proxyHost", thisProxyHost, "https.proxyHost", thisProxyHost,"http.proxyPort", String.valueOf(thisProxyPort),"https.proxyPort", String.valueOf(thisProxyPort) ));
-					}
-					if(dirtyEnv) {
-						String newProxyEnv = String.format("http://%s:%s", thisProxyHost, thisProxyPort);
-						setEnv("http_proxy", newProxyEnv);
-						setEnv("https_proxy", newProxyEnv);
-						ui.displayMessage("Updated environment", format("Set http_proxy and https_proxy to\n%s",  newProxyEnv));
-					}
-				} else if(ui.prompt("Ignore differences", "Do you want disable detecting JVM property and system environment improvements on start up?" )) {
-					config.setCheckEnvironment(false);
-					ui.displayMessage("Ignoring  JVM property and system environment improvements", "Updated your settings in "+config.PROXY_PROPERTIES, MessageType.INFO);
-				}
-			}
-		}
-	}
-	
-	private void checkTrustStoreProperty(String keystore) {
-		if(System.getProperty("javax.net.ssl.trustStore") == null) {
-			if(canUpdateEnv()) {
-				if(ui.prompt("Set trust store for all JVMs", 
-						"The system property javax.net.ssl.trustStore is not set.\nDo you want to set it in the JAVA_TOOL_OPTIONS environment variable?\n(recommended)")) {
-					updateJavaToolsOpts(Map.of("javax.net.ssl.trustStore", keystore));
-				}
-			} else {
-				ui.displayMessage("The system property javax.net.ssl.trustStore is not set", "We recommend to set the environment variable JAVA_TOOL_OPTIONS so that it contains:\n -Djavax.net.ssl.trustStore="+keystore, MessageType.WARNING);
-			}
-		} 
-	}
-
-
-	private void setEnv(String key, String value) {
-		if(!canUpdateEnv()) throw new IllegalStateException("I do notknow how to set environment variables on "+ OperatingSystem.CURRENT);
-		log.info(format("Updating environment %s from %s to %s.", key, System.getenv(key), value));
-		switch (OperatingSystem.CURRENT) {
-			case WINDOWS:
-				try {
-					new ProcessBuilder("setx", key, value).start();
-				} catch (IOException e) {
-					log.error("Could not update environment", e);
-				}
-				break;
-			case MAC:
-			case LINUX:
-				break;
-			default:
-				break;
-		}
-	}
-
-	private boolean canUpdateEnv() {
-		switch (OperatingSystem.CURRENT) {
-		case WINDOWS:
+			File certFile = ImportTLSCert.writeToFile(x509);
+			certFile.deleteOnExit();
+			ImportTLSCert.importCert(
+					ImportTLSCert.getDefaultKeystore(),
+					ImportTLSCert.getDefaultPassword(),
+					ImportTLSCert.getDefaultAlias(x509),
+					certFile.getAbsolutePath());
+			restart(ARG_TEST);
 			return true;
-		case MAC:
-		case LINUX:
-			return new File("~/.bashrc").exists();
-		default:
+		} catch (Exception e) {
+			log.error("TLS import failed", e);
 			return false;
 		}
 	}
 
-	private int getPort(URL url) {
+	private static int portOf(URL url) {
 		return url.getPort() > 0 ? url.getPort() : url.getDefaultPort();
 	}
-	
-	private void updateJavaToolsOpts(Map<String, String> options) {
-		String toolsOptOld = System.getenv("JAVA_TOOL_OPTIONS");
-		Map<String, String> toolOptions = parseToolOptions(toolsOptOld);
-		toolOptions.putAll(options);
-		String toolsOptNew = generateToolOptions(toolOptions);
-		setEnv("JAVA_TOOL_OPTIONS", toolsOptNew);
-		ui.displayMessage("Updated JAVA_TOOL_OPTIONS", format("Updated JAVA_TOOL_OPTIONS from \n%s\nto\n%s",  toolsOptOld, toolsOptNew));
-	}
-	
-	static Map<String, String> parseToolOptions(String options) {
-		Map<String, String> parsed = new HashMap<>();
-		if(options==null || options.isBlank()) return parsed;
-		String replaceFirst = options.replaceFirst("^\"", "").replaceFirst("\"$", "");
-		try(Scanner scan = new Scanner(replaceFirst)) {
-			while (scan.hasNext()) {
-				String[] kv = scan.next().split("=");
-				parsed.put(kv[0].substring(2), kv[1]);
-			}
-			return parsed;			
-		}
-	}
-	
-	static String generateToolOptions(Map<String, String> options) {
-		return options.entrySet().stream()
-				.sorted((e1,e2)-> e1.getKey().compareTo(e2.getKey()))
-				.map(e-> String.format("-D%s=%s", e.getKey(), e.getValue())).collect(Collectors.joining(" "));
+
+	private static String rootMessage(Throwable t) {
+		Throwable c = t;
+		while (c.getCause() != null) c = c.getCause();
+		return c.getMessage() == null ? t.getClass().getSimpleName() : c.getMessage();
 	}
 
+	private static void sleepQuietly(long ms) {
+		try {
+			Thread.sleep(ms);
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+		}
+	}
+
+	public static void main(String[] args) throws IOException, InterruptedException {
+		try (InputStream logProps = Proxy.class.getResourceAsStream("logging.properties")) {
+			if (logProps != null) LogManager.getLogManager().readConfiguration(logProps);
+		}
+		new Proxy().start(args);
+		// Block main forever - in GUI mode the AWT EDT keeps the JVM alive on its own,
+		// but in headless mode all remaining threads may be daemons, so we'd exit otherwise.
+		// Use the Exit menu entry (or a SIGTERM/SIGINT) to terminate the process.
+		Thread.currentThread().join();
+	}
 }

@@ -1,42 +1,29 @@
 package com.baloise.proxy.ui;
 
-import static java.lang.Integer.parseInt;
-
 import java.awt.TrayIcon.MessageType;
 import java.awt.event.ActionListener;
 import java.net.URL;
 import java.util.Map.Entry;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 public interface ProxyUI {
-	Logger log = LoggerFactory.getLogger(ProxyUIAwt.class);
-	
-	public static enum PasswordDialogResult {
+
+	enum PasswordDialogResult {
 		SET, REMOVE, CANCEL;
 
-		static PasswordDialogResult ofValue(String option) {
-			try {
-				return ofValue(parseInt(option)-1);
-			} catch (Exception e) {
-				return CANCEL;
-			}
-		}
-		static PasswordDialogResult ofValue(int option) {
+		public static PasswordDialogResult ofOption(int option) {
 			switch (option) {
-				case 0: 	return SET;
-				case 1: 	return REMOVE;
-				default:	return CANCEL;
+				case 0:  return SET;
+				case 1:  return REMOVE;
+				default: return CANCEL;
 			}
 		}
 	}
 
-	public static enum IMAGE {
+	enum IMAGE {
 		ABOUT, EXIT, FAILURE, HOME, PASSWORD, PROXY_ICON, RESTART, SETTINGS, SUCCESS, TEST;
 
 		public URL url() {
-			return ProxyUI.class.getResource(toString().toLowerCase() + ".png");
+			return ProxyUI.class.getResource(name().toLowerCase() + ".png");
 		}
 	}
 
@@ -44,17 +31,15 @@ public interface ProxyUI {
 
 	void show();
 
-	
 	default void displayMessage(String caption, String text) {
 		displayMessage(caption, text, MessageType.INFO);
 	}
-	
+
 	void displayMessage(String caption, String text, MessageType messageType);
 
-	void showHTLM(boolean success, String title, String html);
-	
+	void showHtml(boolean success, String title, String html);
+
 	boolean prompt(String caption, String text);
 
 	Entry<PasswordDialogResult, String> showPasswordDialog();
-
 }

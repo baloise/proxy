@@ -4,18 +4,17 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.baloise.proxy</groupId>
 	<artifactId>proxy</artifactId>
-	<version>1.0.4</version>
+	<version>2.0.0</version>
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<maven.compiler.target>21</maven.compiler.target>
-		<maven.compiler.source>21</maven.compiler.source>
+		<maven.compiler.release>21</maven.compiler.release>
 		<exec.mainClass>com.baloise.proxy.Proxy</exec.mainClass>
 	</properties>
 	<dependencies>
 		<dependency>
 			<groupId>io.github.littleproxy</groupId>
 			<artifactId>littleproxy</artifactId>
-			<version>2.4.0</version>
+			<version>2.7.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.slf4j</groupId>
@@ -23,35 +22,24 @@
 			<version>2.0.17</version>
 		</dependency>
 		<dependency>
-			<groupId>org.eclipse.platform</groupId>
-			<artifactId>${swt.artifactId}</artifactId>
-			<version>3.129.0</version>
-		</dependency>
-		<dependency>
-			<groupId>org.eclipse.platform</groupId>
-			<artifactId>org.eclipse.jface</artifactId>
-			<version>3.36.0</version>
-			<exclusions>
-				<exclusion>
-					<groupId>org.eclipse.platform</groupId>
-					<artifactId>org.eclipse.osgi</artifactId>
-				</exclusion>
-			</exclusions>
-		</dependency>
-		<dependency>
-			<groupId>junit</groupId>
-			<artifactId>junit</artifactId>
-			<version>4.13.2</version>
+			<groupId>org.junit.jupiter</groupId>
+			<artifactId>junit-jupiter</artifactId>
+			<version>6.0.3</version>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
 	<build>
-		<finalName>${project.artifactId}-${project.activeProfiles[0].id}-${project.version}</finalName>
+		<finalName>${project.artifactId}-${project.version}</finalName>
 		<plugins>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>3.5.2</version>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-shade-plugin</artifactId>
-				<version>3.5.1</version>
+				<version>3.6.0</version>
 				<executions>
 					<execution>
 						<phase>package</phase>
@@ -62,10 +50,11 @@
 				</executions>
 				<configuration>
 					<transformers>
-						<transformer
-							implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+						<transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
 							<mainClass>${exec.mainClass}</mainClass>
 						</transformer>
+						<!-- concatenate META-INF/services entries across dependencies so SPI lookups (Netty, SLF4J) keep working inside the uber-jar -->
+						<transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
 					</transformers>
 					<filters>
 						<filter>
@@ -83,7 +72,7 @@
 			<plugin>
 				<groupId>io.github.git-commit-id</groupId>
 				<artifactId>git-commit-id-maven-plugin</artifactId>
-				<version>8.0.2</version>
+				<version>9.2.0</version>
 				<executions>
 					<execution>
 						<id>get-the-git-infos</id>
@@ -104,127 +93,30 @@
 					<commitIdGenerationMode>full</commitIdGenerationMode>
 				</configuration>
 			</plugin>
-        <plugin>
-            <artifactId>maven-resources-plugin</artifactId>
-            <version>3.2.0</version>
-            <executions>
-                <execution>
-                    <id>copy-final-jar</id>
-                    <phase>package</phase>
-                    <goals>
-                        <goal>copy-resources</goal>
-                    </goals>
-                    <configuration>
-                        <outputDirectory>${project.build.directory}/dist</outputDirectory>
-                        <resources>
-                            <resource>
-                                <directory>${project.build.directory}</directory>
-                                <includes>
-                                    <include>${project.build.finalName}.jar</include>
-                                </includes>
-                            </resource>
-                        </resources>
-                    </configuration>
-                </execution>
-            </executions>
-        </plugin>
+			<plugin>
+				<artifactId>maven-resources-plugin</artifactId>
+				<version>3.3.1</version>
+				<executions>
+					<execution>
+						<id>copy-final-jar</id>
+						<phase>package</phase>
+						<goals>
+							<goal>copy-resources</goal>
+						</goals>
+						<configuration>
+							<outputDirectory>${project.build.directory}/dist</outputDirectory>
+							<resources>
+								<resource>
+									<directory>${project.build.directory}</directory>
+									<includes>
+										<include>${project.build.finalName}.jar</include>
+									</includes>
+								</resource>
+							</resources>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
 		</plugins>
 	</build>
-	<profiles>
-		<profile>
-			<id>download-svg2png</id>
-			<build>
-				<defaultGoal>generate-resources</defaultGoal>
-				<plugins>
-					<plugin>
-						<groupId>com.googlecode.maven-download-plugin</groupId>
-						<artifactId>download-maven-plugin</artifactId>
-						<version>1.7.1</version>
-						<executions>
-							<execution>
-								<id>download-svg2png</id>
-								<phase>generate-resources</phase>
-								<goals>
-									<goal>wget</goal>
-								</goals>
-								<configuration>
-									<url><![CDATA[https://github.com/sterlp/svg2png/releases/download/v1.2.0/svg2png]]></url>
-								</configuration>
-							</execution>
-						</executions>
-						<configuration>
-							<outputDirectory>${project.build.directory}</outputDirectory>
-							<readTimeOut>13131</readTimeOut>
-						</configuration>
-					</plugin>
-				</plugins>
-			</build>
-		</profile>
-		<profile>
-			<id>svg2png</id>
-			<build>
-				<defaultGoal>generate-resources</defaultGoal>
-				<plugins>
-					<plugin>
-						<groupId>org.codehaus.mojo</groupId>
-						<artifactId>exec-maven-plugin</artifactId>
-						<version>3.2.0</version>
-						<executions>
-							<execution>
-								<phase>generate-resources</phase>
-								<goals>
-									<goal>java</goal>
-								</goals>
-								<configuration>
-									<includeProjectDependencies>false</includeProjectDependencies>
-									<includePluginDependencies>true</includePluginDependencies>
-									<mainClass>org.sterl.svg2png.Main</mainClass>
-									<arguments>
-										<argument>
-											src/main/resources/com/baloise/proxy/ui</argument>
-									</arguments>
-								</configuration>
-							</execution>
-						</executions>
-						<dependencies>
-							<dependency>
-								<groupId>org.sterl.svg2png</groupId>
-								<artifactId>svg2png</artifactId>
-								<version>1.2.0</version>
-								<scope>system</scope>
-								<systemPath>${project.build.directory}/svg2png</systemPath>
-							</dependency>
-						</dependencies>
-					</plugin>
-				</plugins>
-			</build>
-		</profile>
-		<profile>
-			<id>win64</id>
-			<properties>
-				<swt.artifactId>org.eclipse.swt.win32.win32.x86_64</swt.artifactId>
-			</properties>
-			<activation>
-				<activeByDefault>true</activeByDefault>
-			</activation>
-		</profile>
-		<profile>
-			<id>lin64</id>
-			<properties>
-				<swt.artifactId>org.eclipse.swt.gtk.linux.x86_64</swt.artifactId>
-			</properties>
-			<activation>
-				<activeByDefault>false</activeByDefault>
-			</activation>
-		</profile>
-		<profile>
-			<id>mac64</id>
-			<properties>
-				<swt.artifactId>org.eclipse.swt.cocoa.macosx.x86_64</swt.artifactId>
-			</properties>
-			<activation>
-				<activeByDefault>false</activeByDefault>
-			</activation>
-		</profile>
-	</profiles>
 </project>

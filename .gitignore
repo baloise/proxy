@@ -10,3 +10,8 @@
 
 /src/main/resources/com/baloise/proxy/git.properties
 /.git-versioned-pom.xml
+
+# stale artefacts from older build pipelines
+/custom-runtime/
+/input/
+/output/

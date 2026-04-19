@@ -3,6 +3,7 @@ package com.baloise.proxy;
 import static java.util.stream.Collectors.toList;
 
 import java.net.InetSocketAddress;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Queue;
 import java.util.regex.Pattern;
@@ -22,127 +23,180 @@ import com.baloise.proxy.config.Config;
 
 import common.BasicAuth;
 import common.User;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
 
+/**
+ * Fans requests out to either the upstream authenticating proxy or a local bypass proxy
+ * depending on the no-proxy regex. Reads credentials through a cached volatile field so
+ * runtime password changes can be applied via {@link #invalidateAuthCache()} without
+ * recreating the chain.
+ *
+ * <p>Hot-path invariants (every request goes through these):
+ * <ul>
+ *   <li>{@link #extractHost(String)} is allocation-free on the common cases.</li>
+ *   <li>Both {@link InetSocketAddress} targets are built once at construction and reused.</li>
+ *   <li>The auth header is cached between password invalidations.</li>
+ *   <li>Logging in the routing callback is guarded by {@code isDebugEnabled()}.</li>
+ * </ul>
+ */
 public class SimpleProxyChain {
 
-	private final int UPSTREAM_PORT;
-	private final String UPSTREAM_SERVER;
-	private final int INTERNAL_PORT;
-	public final int[] LOCAL_PORTS;
-	private final Pattern NO_PROXY_HOSTS_REGEX;
+	private static final Logger log = LoggerFactory.getLogger(SimpleProxyChain.class);
+
+	private final String upstreamServer;
+	private final int upstreamPort;
+	public final int[] localPorts;
+	private final int internalPort;
+	private final boolean allowLocalOnly;
+	private final boolean useAuth;
+	private final int connectTimeoutMs;
+	private final int idleTimeoutSeconds;
+	private final Pattern noProxyPattern;
 	private final ChainedProxyManager chainedProxyManager;
+
+	/** Fully-formed header value, e.g. "Basic dXNlcjpwdw==". */
+	private volatile String cachedAuthHeaderValue;
 	private HttpProxyServer internalProxy;
 	private List<HttpProxyServer> localProxies;
-	Logger log = LoggerFactory.getLogger(SimpleProxyChain.class);
-	private final boolean ALLOW_LOCAL_ONLY;
-
 
 	public SimpleProxyChain(Config config) {
-		this(
-				config.getUpstreamServer(),
-				config.getUpstreamPort() ,
-				config.getPort(),
-				config.getInternalPort(),
-				config.getNoproxyHostsRegEx(),
-				config.useAuth(),
-				config.allowLocalOnly()
-			);
-	}
-	
-	public SimpleProxyChain(String upstreamServer, int upstreamPort, int[] port, int internalPort, String noproxyHostsRegEx, boolean useAuth, boolean allowLocalOnly) {
-		this.UPSTREAM_PORT = upstreamPort;
-		this.UPSTREAM_SERVER = upstreamServer;
-		this.INTERNAL_PORT = internalPort;
-		this.LOCAL_PORTS = port;
-		this.ALLOW_LOCAL_ONLY = allowLocalOnly;
-		this.NO_PROXY_HOSTS_REGEX = Pattern.compile(noproxyHostsRegEx);
-		
-		log.info(this.toString());
-		log.info("user: " + User.get());
-		
-		ChainedProxyAdapter webproxy = new ChainedProxyAdapter() {
-			@Override
-			public InetSocketAddress getChainedProxyAddress() {
-				return new InetSocketAddress(UPSTREAM_SERVER, UPSTREAM_PORT);
-			}
-			
-			String authParam = useAuth ? BasicAuth.get() : "";
-			
-			@Override
-			public void filterRequest(HttpObject httpObject) {
-				if (httpObject instanceof HttpRequest && useAuth) {
-					HttpRequest httpRequest = (HttpRequest) httpObject;
-					httpRequest.headers().add("Proxy-Authorization", "Basic " + authParam);
-				}
-			}
-			
-		};
-		ChainedProxyAdapter no_proxy = new ChainedProxyAdapter() {
-			@Override
-			public InetSocketAddress getChainedProxyAddress() {
-				return new InetSocketAddress("localhost", INTERNAL_PORT);
-			}
-		};
-		chainedProxyManager = new ChainedProxyManager() {
+		this.upstreamServer = config.getUpstreamServer();
+		this.upstreamPort = config.getUpstreamPort();
+		this.localPorts = config.getPort();
+		this.internalPort = config.getInternalPort();
+		this.allowLocalOnly = config.allowLocalOnly();
+		this.useAuth = config.useAuth();
+		this.connectTimeoutMs = config.getConnectTimeoutMs();
+		this.idleTimeoutSeconds = config.getIdleTimeoutSeconds();
+		this.noProxyPattern = Pattern.compile(config.getNoproxyHostsRegEx());
 
-			@Override
-			public void lookupChainedProxies(HttpRequest httpRequest, Queue<ChainedProxy> chainedProxies, ClientDetails clientDetails) {
-				if (noProxy(getHost(httpRequest))) {
-					if(log.isDebugEnabled())
-						log.debug("calling "+ httpRequest.getUri() + " without proxy");
-					chainedProxies.add(no_proxy);
-				} else {
-					if(log.isDebugEnabled())
-						log.debug("calling "+ httpRequest.getUri() + " trough upstream proxy");
-					chainedProxies.add(webproxy);
+		log.info("{} user={}", this, User.get());
+
+		// Reuse these addresses across every request.
+		final InetSocketAddress upstreamAddr = InetSocketAddress.createUnresolved(upstreamServer, upstreamPort);
+		final InetSocketAddress loopbackAddr = InetSocketAddress.createUnresolved("localhost", internalPort);
+
+		// When useAuth is false, drop filterRequest entirely - no per-request boolean check.
+		final ChainedProxyAdapter webproxy = useAuth
+				? new ChainedProxyAdapter() {
+					@Override public InetSocketAddress getChainedProxyAddress() { return upstreamAddr; }
+					@Override public void filterRequest(HttpObject httpObject) {
+						if (httpObject instanceof HttpRequest) {
+							((HttpRequest) httpObject).headers().set(HttpHeaderNames.PROXY_AUTHORIZATION, authHeaderValue());
+						}
+					}
 				}
+				: new ChainedProxyAdapter() {
+					@Override public InetSocketAddress getChainedProxyAddress() { return upstreamAddr; }
+				};
+
+		final ChainedProxyAdapter noProxy = new ChainedProxyAdapter() {
+			@Override
+			public InetSocketAddress getChainedProxyAddress() {
+				return loopbackAddr;
 			}
-			
-			private boolean noProxy(String host) {
-				return NO_PROXY_HOSTS_REGEX.matcher(host).matches();
+		};
+
+		this.chainedProxyManager = new ChainedProxyManager() {
+			@Override
+			public void lookupChainedProxies(HttpRequest request, Queue<ChainedProxy> chain, ClientDetails client) {
+				boolean bypass = noProxyPattern.matcher(extractHost(request.getUri())).matches();
+				if (log.isDebugEnabled()) {
+					log.debug("{} {} -> {}", request.getMethod(), request.getUri(), bypass ? "direct" : "upstream");
+				}
+				chain.add(bypass ? noProxy : webproxy);
 			}
-			
 		};
 	}
 
-	private  String getHost(HttpRequest httpRequest) {
-		String[] tokens = httpRequest.getUri().split("/+", 3);
-		String host = tokens.length == 1 ? tokens[0] : tokens[1];
-		tokens = host.split(":", 2);
-		host = tokens[0];
-		return host;
+	/** Invalidate cached credentials (call after password change). */
+	public void invalidateAuthCache() {
+		cachedAuthHeaderValue = null;
+	}
+
+	private String authHeaderValue() {
+		String v = cachedAuthHeaderValue;
+		if (v == null) {
+			v = "Basic " + BasicAuth.get();
+			cachedAuthHeaderValue = v;
+		}
+		return v;
+	}
+
+	/**
+	 * Extract the host part of a proxy request URI. Handles:
+	 * <ul>
+	 *   <li>{@code http://host:port/path} (HTTP)</li>
+	 *   <li>{@code https://host:port/path}</li>
+	 *   <li>{@code host:port} (CONNECT tunnel)</li>
+	 *   <li>{@code [::1]:443} (IPv6 literal in CONNECT)</li>
+	 * </ul>
+	 * Allocation-free except for the final {@code substring}.
+	 */
+	static String extractHost(String uri) {
+		int hostStart = 0;
+		int schemeEnd = uri.indexOf("://");
+		if (schemeEnd > 0) hostStart = schemeEnd + 3;
+
+		// IPv6 literal: "[...]"
+		if (hostStart < uri.length() && uri.charAt(hostStart) == '[') {
+			int close = uri.indexOf(']', hostStart);
+			if (close > 0) return uri.substring(hostStart + 1, close);
+		}
+
+		int end = uri.length();
+		int pathSep = uri.indexOf('/', hostStart);
+		if (pathSep >= 0) end = pathSep;
+		int portSep = uri.indexOf(':', hostStart);
+		if (portSep >= 0 && portSep < end) end = portSep;
+		return uri.substring(hostStart, end);
 	}
 
 	public void start(HttpFiltersSource filters) throws Exception {
 		try {
-			internalProxy = DefaultHttpProxyServer.bootstrap().withPort(INTERNAL_PORT).start();
+			internalProxy = DefaultHttpProxyServer.bootstrap()
+					.withName("proxy-internal")
+					.withPort(internalPort)
+					.withConnectTimeout(connectTimeoutMs)
+					.withIdleConnectionTimeout(idleTimeoutSeconds)
+					.start();
 		} catch (RuntimeException e) {
 			throw new Exception(e.getCause() == null ? e : e.getCause());
 		}
-		localProxies = IntStream.of(LOCAL_PORTS).mapToObj(
-				localPort -> 
-				DefaultHttpProxyServer.bootstrap()
-					.withPort(localPort)
-					.withAllowLocalOnly(ALLOW_LOCAL_ONLY)
-					.withChainProxyManager(chainedProxyManager)
-					.withFiltersSource(filters)
-				.start()).collect(toList());
+		localProxies = IntStream.of(localPorts)
+				.mapToObj(port -> DefaultHttpProxyServer.bootstrap()
+						.withName("proxy-" + port)
+						.withPort(port)
+						.withAllowLocalOnly(allowLocalOnly)
+						.withConnectTimeout(connectTimeoutMs)
+						.withIdleConnectionTimeout(idleTimeoutSeconds)
+						.withChainProxyManager(chainedProxyManager)
+						.withFiltersSource(filters)
+						.start())
+				.collect(toList());
 	}
-	
-	public  void stop() {
-		localProxies.forEach(HttpProxyServer::stop);
-		internalProxy.stop();
+
+	public void stop() {
+		if (localProxies != null) localProxies.forEach(SimpleProxyChain::abortQuietly);
+		if (internalProxy != null) abortQuietly(internalProxy);
+		localProxies = null;
+		internalProxy = null;
+	}
+
+	private static void abortQuietly(HttpProxyServer server) {
+		try {
+			server.abort();
+		} catch (Exception e) {
+			log.debug("abort failed", e);
+		}
 	}
 
 	@Override
 	public String toString() {
-		return "SimpleProxyChain [UPSTREAM_PORT=" + UPSTREAM_PORT + ", UPSTREAM_SERVER=" + UPSTREAM_SERVER
-				+ ", INTERNAL_PORT=" + INTERNAL_PORT + ", PORT=" + LOCAL_PORTS + ", NO_PROXY_HOSTS_REGEX="
-				+ NO_PROXY_HOSTS_REGEX + "]";
+		return String.format("SimpleProxyChain[upstream=%s:%d internal=%d local=%s noProxy=%s]",
+				upstreamServer, upstreamPort, internalPort,
+				Arrays.toString(localPorts), noProxyPattern);
 	}
-	
-	
-
 }

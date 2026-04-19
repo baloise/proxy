@@ -1,52 +1,42 @@
 package com.baloise.proxy.config;
 
+import static com.baloise.proxy.config.Config.parseHTTPProxyEnv;
 import static com.baloise.proxy.config.Config.parseIntArray;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import com.baloise.proxy.config.Config.UIType;
-
-public class ConfigTest {
-
+class ConfigTest {
 
 	@Test
-	public void parseUITypeNull() throws Exception {
-		assertEquals(UIType.SWT, UIType.parse(null));
+	void parseIntArray_single() {
+		assertArrayEquals(new int[]{8888}, parseIntArray("8888"));
 	}
+
 	@Test
-	public void parseUITypeEmpty() throws Exception {
-		assertEquals(UIType.SWT, UIType.parse(""));
+	void parseIntArray_multiple() {
+		assertArrayEquals(new int[]{8888, 3128}, parseIntArray("8888, 3128"));
 	}
-	
+
 	@Test
-	public void parseUITypeGibberish() throws Exception {
-		assertEquals(UIType.SWT, UIType.parse("lkjah ads654a54sdf"));
+	void parseIntArray_dirtyInputStillExtractsDigits() {
+		assertArrayEquals(new int[]{8888, 3128}, parseIntArray("8888 lksdlf; <>, 3128"));
 	}
-	
+
 	@Test
-	public void parseUITypawt() throws Exception {
-		assertEquals(UIType.AWT, UIType.parse(" awt "));
+	void parseIntArray_noDigitsReturnsEmpty() {
+		assertArrayEquals(new int[]{}, parseIntArray("sdfsdf"));
 	}
-	
+
 	@Test
-	public void parseUITypAWT() throws Exception {
-		assertEquals(UIType.AWT, UIType.parse(" AWT "));
+	void parseIntArray_nullReturnsEmpty() {
+		assertArrayEquals(new int[]{}, parseIntArray(null));
 	}
-	
+
 	@Test
-	public void parseUITypSWT() throws Exception {
-		assertEquals(UIType.SWT, UIType.parse("SWT"));
+	void parseHTTPProxyEnv_stripsScheme() {
+		assertArrayEquals(new String[]{"proxy.example.com", "8080"}, parseHTTPProxyEnv("http://proxy.example.com:8080"));
+		assertArrayEquals(new String[]{"proxy.example.com", "8080"}, parseHTTPProxyEnv("HTTPS://proxy.example.com:8080"));
+		assertArrayEquals(new String[]{"proxy.example.com", "8080"}, parseHTTPProxyEnv("proxy.example.com:8080"));
 	}
-	
-	@Test
-	public void testParseIntArray() throws Exception {
-		assertArrayEquals(new int[] {8888}, parseIntArray("8888"));
-		assertArrayEquals(new int[] {8888, 3128}, parseIntArray("8888, 3128"));
-		assertArrayEquals(parseIntArray("8888 lksdlf; <>, 3128"), parseIntArray("8888, 3128"));
-		assertArrayEquals(new int[] {}, parseIntArray("sdfsdf"));
-	}
-	
-	
 }
